@@ -1,0 +1,1026 @@
+{
+  "name": "Barbershop queue system with n8n + Airtable",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1312,
+        -448
+      ],
+      "id": "cd61ec42-3c7b-4099-8529-c0e69288c890",
+      "name": "Telegram Trigger",
+      "webhookId": "82bb9195-b4b6-46e1-b02e-fd33fe327a57",
+      "credentials": {
+        "telegramApi": {
+          "id": "UG0eC7QjfGFTdAmc",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appYlurpa2ab6WQYY",
+          "mode": "list",
+          "cachedResultName": "Barbershop OS",
+          "cachedResultUrl": "https://airtable.com/appYlurpa2ab6WQYY"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblepqblsemvHFNJX",
+          "mode": "list",
+          "cachedResultName": "Services",
+          "cachedResultUrl": "https://airtable.com/appYlurpa2ab6WQYY/tblepqblsemvHFNJX"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -864,
+        -320
+      ],
+      "id": "89faeb99-d275-4b20-89f1-8fcd4470af5e",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YTJ2b7pOZkl2nWKO",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.data.map(item => `${item.fields.Name} — $${item.fields.Price} (${item.fields[\"Duration (mins)\"]} mins)`).join('\\n') }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Shave — $10",
+                    "additionalFields": {
+                      "callback_data": "svc_shave"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Fade — $20",
+                    "additionalFields": {
+                      "callback_data": "svc_fade"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Kids Cut — $5",
+                    "additionalFields": {
+                      "callback_data": "svc_kids cut"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -352,
+        -336
+      ],
+      "id": "802b09d3-9da5-47fd-8a82-f8ed6dd59169",
+      "name": "Send a text message",
+      "webhookId": "3f763bd1-d657-4995-b886-b754d603f414",
+      "credentials": {
+        "telegramApi": {
+          "id": "UG0eC7QjfGFTdAmc",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -528,
+        -336
+      ],
+      "id": "fc15c644-9fa0-4e89-b57a-be0c8b567abb",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "/book",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "42072a47-e834-45f2-982e-91fea57a9327"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "07a1d43a-22d7-450d-8a1c-a45261d168b2",
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "svc_",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "aa9268ed-7e52-49da-8506-93d6966e2664",
+                    "leftValue": "={{ $json.callback_query.data }}",
+                    "rightValue": "book_",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1136,
+        -464
+      ],
+      "id": "11e098a1-536f-4db3-ab4f-1aa3cb5a9a33",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fcbe9b2d-31ab-4843-8265-2c2951cb0ae5",
+              "name": "selectedService",
+              "value": "={{ $json.callback_query.data.replace('svc_', '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1296,
+        -224
+      ],
+      "id": "55fff4c5-e968-4aad-b923-178307cfa285",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appYlurpa2ab6WQYY",
+          "mode": "list",
+          "cachedResultName": "Barbershop OS",
+          "cachedResultUrl": "https://airtable.com/appYlurpa2ab6WQYY"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblepqblsemvHFNJX",
+          "mode": "list",
+          "cachedResultName": "Services",
+          "cachedResultUrl": "https://airtable.com/appYlurpa2ab6WQYY/tblepqblsemvHFNJX"
+        },
+        "filterByFormula": "=LOWER({Name}) = \"{{ $json.selectedService }}\"",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -1120,
+        -224
+      ],
+      "id": "d90ad9b0-1596-446a-b8d6-8dae45d97651",
+      "name": "Search records1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YTJ2b7pOZkl2nWKO",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appYlurpa2ab6WQYY",
+          "mode": "list",
+          "cachedResultName": "Barbershop OS",
+          "cachedResultUrl": "https://airtable.com/appYlurpa2ab6WQYY"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblNAmYRaSibyM1XU",
+          "mode": "list",
+          "cachedResultName": "Barbers",
+          "cachedResultUrl": "https://airtable.com/appYlurpa2ab6WQYY/tblNAmYRaSibyM1XU"
+        },
+        "filterByFormula": "{Status} = \"Available\"",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -816,
+        176
+      ],
+      "id": "bb2373e8-426e-49c0-a14c-487c95ef84e1",
+      "name": "Search records2",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YTJ2b7pOZkl2nWKO",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        32
+      ],
+      "id": "6120917b-0eb1-4996-827b-bc636dce1708",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.callback_query.from.id }}",
+        "text": "=You picked {{ $('Search records1').item.json.fields.Name }}. Now choose a barber:",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Eddy",
+                    "additionalFields": {
+                      "callback_data": "={{ 'book_' + $('Search records1').item.json.id + '_rec2YgChqjMnGPHqf' }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -368,
+        32
+      ],
+      "id": "7f1e3954-51a2-4011-a1ae-7bcfaf4b2521",
+      "name": "Send a text message1",
+      "webhookId": "31fdb394-12b2-47cb-99bf-0f3eadf83ee2",
+      "credentials": {
+        "telegramApi": {
+          "id": "UG0eC7QjfGFTdAmc",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1effd2e3-fdb7-4765-9696-6d7233a61386",
+              "name": "serviceId",
+              "value": "={{ $json.callback_query.data.split('_')[1] }}",
+              "type": "string"
+            },
+            {
+              "id": "0d8a61ce-db73-43bf-bd08-1f7b1015e671",
+              "name": "barberId",
+              "value": "={{ $json.callback_query.data.split('_')[2] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -832,
+        -64
+      ],
+      "id": "9c0dd6fd-7b3a-4193-80e5-6969c4737820",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appYlurpa2ab6WQYY",
+          "mode": "list",
+          "cachedResultName": "Barbershop OS",
+          "cachedResultUrl": "https://airtable.com/appYlurpa2ab6WQYY"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblOqpiKdTXMiH1KR",
+          "mode": "list",
+          "cachedResultName": "Clients",
+          "cachedResultUrl": "https://airtable.com/appYlurpa2ab6WQYY/tblOqpiKdTXMiH1KR"
+        },
+        "filterByFormula": "={Telegram Chat ID} = \"{{ $json.callback_query.from.id }}\"",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -528,
+        -160
+      ],
+      "id": "eddc7080-1f7e-4331-be5b-aada5807b78e",
+      "name": "Search records3",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YTJ2b7pOZkl2nWKO",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4dcc70a0-223e-4d84-ad25-fd22f85d52b0",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -352,
+        -160
+      ],
+      "id": "dd5516ca-70fe-447b-94cb-006741057f3d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appYlurpa2ab6WQYY",
+          "mode": "list",
+          "cachedResultName": "Barbershop OS",
+          "cachedResultUrl": "https://airtable.com/appYlurpa2ab6WQYY"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblOqpiKdTXMiH1KR",
+          "mode": "list",
+          "cachedResultName": "Clients",
+          "cachedResultUrl": "https://airtable.com/appYlurpa2ab6WQYY/tblOqpiKdTXMiH1KR"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('Edit Fields1').item.json.callback_query.from.first_name }}",
+            "Telegram Chat ID": "={{ ($('Edit Fields1').item.json.callback_query?.from?.id ?? $('Edit Fields1').item.json.message?.from?.id ?? '').toString() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Telegram Chat ID",
+              "displayName": "Telegram Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Preferred Barber",
+              "displayName": "Preferred Barber",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Queue",
+              "displayName": "Queue",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Last Visit Date",
+              "displayName": "Last Visit Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Total Visits",
+              "displayName": "Total Visits",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -176,
+        -64
+      ],
+      "id": "137eca6c-f43b-4e2f-9e85-84143c491ba2",
+      "name": "Create a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YTJ2b7pOZkl2nWKO",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -80,
+        -304
+      ],
+      "id": "efc5263c-a8bc-49c8-8425-55913fed082f",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appYlurpa2ab6WQYY",
+          "mode": "list",
+          "cachedResultName": "Barbershop OS",
+          "cachedResultUrl": "https://airtable.com/appYlurpa2ab6WQYY"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbloiHPW4lP210H44",
+          "mode": "list",
+          "cachedResultName": "Queue",
+          "cachedResultUrl": "https://airtable.com/appYlurpa2ab6WQYY/tbloiHPW4lP210H44"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Client": "={{ [$json.id] }}",
+            "Barber": "={{ [$('Edit Fields1').item.json.barberId] }}",
+            "Service": "={{ [$('Edit Fields1').item.json.serviceId] }}",
+            "Status": "Waiting",
+            "Type": "Walk-in",
+            "Start Time": "={{ $now }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Entry",
+              "displayName": "Entry",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client",
+              "displayName": "Client",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Barber",
+              "displayName": "Barber",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Service",
+              "displayName": "Service",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Waiting",
+                  "value": "Waiting"
+                },
+                {
+                  "name": "In Progress",
+                  "value": "In Progress"
+                },
+                {
+                  "name": "Done",
+                  "value": "Done"
+                },
+                {
+                  "name": "No-show",
+                  "value": "No-show"
+                },
+                {
+                  "name": "Cancelled",
+                  "value": "Cancelled"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Type",
+              "displayName": "Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Walk-in",
+                  "value": "Walk-in"
+                },
+                {
+                  "name": "Scheduled",
+                  "value": "Scheduled"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Join Time",
+              "displayName": "Join Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Start Time",
+              "displayName": "Start Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "End Time ",
+              "displayName": "End Time ",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Transactions",
+              "displayName": "Transactions",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        128,
+        -304
+      ],
+      "id": "c61881a2-7297-41a8-a1fa-007a59dc12a1",
+      "name": "Create a record1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YTJ2b7pOZkl2nWKO",
+          "name": "Airtable account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appYlurpa2ab6WQYY",
+          "mode": "list",
+          "cachedResultName": "Barbershop OS",
+          "cachedResultUrl": "https://airtable.com/appYlurpa2ab6WQYY"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbloiHPW4lP210H44",
+          "mode": "list",
+          "cachedResultName": "Queue",
+          "cachedResultUrl": "https://airtable.com/appYlurpa2ab6WQYY/tbloiHPW4lP210H44"
+        },
+        "filterByFormula": "=AND(\n  {Status} = \"Waiting\",\n  FIND(\"{{ $('Edit Fields1').item.json.barberId }}\", ARRAYJOIN({Barber Record ID})) > 0,\n  RECORD_ID() != \"{{ $('Create a record1').item.json.id }}\"\n)\n\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        -304
+      ],
+      "id": "c2cefceb-c4eb-4b52-9981-2321f293d944",
+      "name": "Search records4",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YTJ2b7pOZkl2nWKO",
+          "name": "Airtable account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Search records1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    },
+    "Search records1": {
+      "main": [
+        [
+          {
+            "node": "Search records2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records2": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Search records3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records3": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a record": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Create a record1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a record1": {
+      "main": [
+        [
+          {
+            "node": "Search records4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
