@@ -1,0 +1,1022 @@
+{
+  "name": "COMPANY HR RECRUITMENT",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "RECRUITMENT FORM",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Phone Number",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email Address",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Interested Position ",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Qualificatiions",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Work experience",
+              "fieldType": "textarea",
+              "placeholder": "Describe your previous work experience, including your role, company, and responsibilities.",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Years of Experience",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "CV Upload",
+              "fieldType": "file",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Location",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "807f3b2d-1813-46a4-8c66-6f09a8987d8a",
+      "name": "APPLICATION FORM",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -1120,
+        -48
+      ],
+      "webhookId": "7b2cc565-86a0-43aa-bdc7-02a9b074ba9c"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const q = (($json.Qualifications ?? $json.Qualificatiions) || '').toString().toLowerCase();\nconst hasBsc = /b\\.?\\s*sc/.test(q);\nconst years = Number($json['Years of Experience']) || 0;\nconst meetsExp = years >= 5;\nlet status;\nif (hasBsc && meetsExp) { status = 'Automatically Qualified'; }\nelse if (!hasBsc && !meetsExp) { status = 'Not Qualified'; }\nelse { status = 'Manual Review'; }\nreturn { json: { ...$json, Status: status } };"
+      },
+      "id": "2a8b5c4c-b3db-4426-b4fd-85e6ed896e74",
+      "name": "Determine Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -912,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "RECRUITMENT FORM DATABASE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Full Name": "={{ $json['Full Name'] }}",
+            "Phone Number": "={{ $json['Phone Number'] }}",
+            "Email Address": "={{ $json['Email Address'] }}",
+            "Interested Position": "={{ $json['Interested Position '] }}",
+            "Qualifications": "={{ $json.Qualificatiions }}",
+            "Work Experience": "={{ $json['Work experience'] }}",
+            "Years of Experience": "={{ $json['Years of Experience'] }}",
+            "Location": "={{ $json.Location }}",
+            " Status": "={{ $json.Status }}"
+          },
+          "matchingColumns": [
+            "Email Address"
+          ],
+          "schema": [
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Address",
+              "displayName": "Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Interested Position",
+              "displayName": "Interested Position",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Qualifications",
+              "displayName": "Qualifications",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Work Experience",
+              "displayName": "Work Experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Years of Experience",
+              "displayName": "Years of Experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": " Status",
+              "displayName": " Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "db0989b2-0f3b-4cad-b874-a0b96a66ea9c",
+      "name": "ALL APPLICANTS DATABASE",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -704,
+        -64
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "snHq6T7gSXo1o380",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "rule-auto",
+                    "leftValue": "={{ $('Determine Status').item.json.Status }}",
+                    "rightValue": "Automatically Qualified",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "rule-not",
+                    "leftValue": "={{ $('Determine Status').item.json.Status }}",
+                    "rightValue": "Not Qualified",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "rule-manual",
+                    "leftValue": "={{ $('Determine Status').item.json.Status }}",
+                    "rightValue": "Manual Review",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9f33bda4-0cfe-41da-a45e-7a666fbb3839",
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -480,
+        -80
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "b0e63e07-e5e2-4c44-9b42-4f07917154e3",
+      "name": "AUTOMATICALLY QUALIFIED",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        -336
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "RECRUITMENT FORM DATABASE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 574510122,
+          "mode": "list",
+          "cachedResultName": "Sheet2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=574510122"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Full name": "={{ $json['Full Name'] }}",
+            "Phone Number": "={{ $json['Phone Number'] }}",
+            "Email address": "={{ $json['Email Address'] }}",
+            "Interested Position": "={{ $json['Interested Position'] }}",
+            "Qualifications": "={{ $json.Qualifications }}",
+            "Work experience": "={{ $json['Work Experience'] }}",
+            "Years of Experience": "={{ $json['Years of Experience'] }}",
+            "Location ": "={{ $json.Location }}",
+            "Status": "={{ $('Determine Status').item.json.Status }}"
+          },
+          "matchingColumns": [
+            "Email address"
+          ],
+          "schema": [
+            {
+              "id": "Full name",
+              "displayName": "Full name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email address",
+              "displayName": "Email address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Interested Position",
+              "displayName": "Interested Position",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Qualifications",
+              "displayName": "Qualifications",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Work experience",
+              "displayName": "Work experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Years of Experience",
+              "displayName": "Years of Experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Location ",
+              "displayName": "Location ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "9a94cf8a-d27b-4d66-bb34-d5787ba76601",
+      "name": "AUTOMATICALLY QUALIFIED DATABASE",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -16,
+        -336
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "snHq6T7gSXo1o380",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "hr@example.com",
+        "subject": "Qualifed Candidate Detected",
+        "emailType": "text",
+        "message": "=Candidate: {{ $json['Full name'] }}\n\n{{ $json['Full name'] }} has been automatically qualified for the position of {{ $json['Interested Position'] }} based on the information provided during the recruitment process.\n\nHe holds a {{ $json.Qualifications }} and has a {{ $json['Years of Experience'] }} years experience in {{ $json['Work experience'] }}, providing relevant experience for an operations-focused role.\n\nCandidate Details\n\nFull Name: {{ $json['Full name'] }}\nPhone: {{ $json['Phone Number'] }}\nEmail: {{ $json['Email address'] }}\nPosition: {{ $json['Interested Position'] }}\nQualification: {{ $json.Qualifications }}\nExperience: {{ $json['Work experience'] }}\nYears of Experience: {{ $json['Years of Experience'] }}\nLocation: {{ $json['Location '] }}\nApplication Status: {{ $json.Status }}\n\nRecommendation: Proceed to the offer stage, subject to HR confirmation of the employment terms, including salary, start date, reporting structure, probation period, benefits, working hours, and other applicable conditions.\n",
+        "options": {}
+      },
+      "id": "50a04bb7-e578-405f-935e-e0e3f88cc3ff",
+      "name": "MESSAGE TO HR",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        -48
+      ],
+      "webhookId": "ae04bb1f-1e89-4a1f-aef6-b6904d463268",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "70iXeIYBbnhPl9KL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_DOC_TEMPLATE_ID",
+          "mode": "list",
+          "cachedResultName": "offerletterready2",
+          "cachedResultUrl": "https://docs.google.com/document/d/YOUR_GOOGLE_DOC_TEMPLATE_ID/edit?usp=drivesdk"
+        },
+        "name": "=Offer Letter - {{ $('AUTOMATICALLY QUALIFIED DATABASE').item.json['Full name'] }}",
+        "options": {}
+      },
+      "id": "ba592d2b-9765-480a-ad49-b9776bd3f605",
+      "name": "Copy Offer Template",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        272,
+        -384
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "z09UXBPg17zTCbc1",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Copy Offer Template').item.json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "replaceAll",
+              "text": "{{FullName}}",
+              "replaceText": "={{ $('AUTOMATICALLY QUALIFIED DATABASE').item.json['Full name'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{Position}}",
+              "replaceText": "={{ $('AUTOMATICALLY QUALIFIED DATABASE').item.json['Interested Position'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{Location}}",
+              "replaceText": "={{ $('AUTOMATICALLY QUALIFIED DATABASE').item.json['Location '] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{Date}}",
+              "replaceText": "={{ $now.toFormat('MMMM d, yyyy') }}"
+            }
+          ]
+        }
+      },
+      "id": "958b6945-9388-43da-8e8d-0915bdbe362c",
+      "name": "Fill Offer Letter",
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -384
+      ],
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "E56J5aOqG6uQvEwy",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_DOC_TEMPLATE_ID",
+          "mode": "list",
+          "cachedResultName": "offerletterready2",
+          "cachedResultUrl": "https://docs.google.com/document/d/YOUR_GOOGLE_DOC_TEMPLATE_ID/edit?usp=drivesdk"
+        },
+        "options": {
+          "binaryPropertyName": "data",
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "application/pdf"
+            }
+          },
+          "fileName": "=Offer Letter - {{ $('AUTOMATICALLY QUALIFIED DATABASE').item.json['Full name'] }}.pdf"
+        }
+      },
+      "id": "43f76dea-fe9e-4a8f-8735-01057a01d1af",
+      "name": "Export Offer PDF",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        640,
+        -384
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "z09UXBPg17zTCbc1",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('AUTOMATICALLY QUALIFIED DATABASE').item.json['Email address'] }}",
+        "subject": "Congratulatiions On your Employment!",
+        "emailType": "text",
+        "message": "=Subject: Offer of Employment –  {{ $('AUTOMATICALLY QUALIFIED DATABASE').item.json['Interested Position'] }} [COMPANY NAME]\n\nDear {{ $('AUTOMATICALLY QUALIFIED DATABASE').item.json['Full name'] }},\n\nCongratulations! We are pleased to formally offer you the position of {{ $('AUTOMATICALLY QUALIFIED DATABASE').item.json['Interested Position'] }} at [COMPANY NAME].\n\nPlease find your official offer letter attached, which outlines the role, work location, compensation, and other relevant details.\n\nTo accept this offer, kindly sign the attached letter and return a scanned copy to this email at your earliest convenience. If you have any questions about the offer or would like to discuss any part of it before accepting, please don't hesitate to reach out — we're happy to talk it through.\n\nWe're genuinely excited about the possibility of you joining our team and look forward to your response.\n\nWarm regards,\nHuman Resources Department\n[COMPANY NAME]",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "id": "9f1a5f9d-216d-4abd-8788-9dcf866d4bf8",
+      "name": "OFFER MESSAGE TO QUALIFIED CANDIDATE",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        -384
+      ],
+      "webhookId": "c19e95e0-6dcb-40b7-b857-af7faf719583",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "70iXeIYBbnhPl9KL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "86aaabb2-dcea-490b-9885-7b70f2d4fabd",
+      "name": "NOT QUALIFIED",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json['Email Address'] }}",
+        "subject": "Application Update",
+        "emailType": "text",
+        "message": "=Dear {{ $json['Full Name'] }},\n\nThank you for your interest in the {{ $json['Interested Position'] }} at our company and for taking the time to submit your application.\n\nFollowing a review of your application and the information provided, we regret to inform you that your application has not been a success, as it does not currently meet the requirements for the position.\n\nWe appreciate the time and effort you invested in the application process. Please do not be discouraged, as we encourage you to apply for future opportunities with us that may better match your qualifications and experience.\n\nWe wish you every success in your job search and future career endeavors.\n\nKind regards,\n\nHuman Resources Department\n\n",
+        "options": {}
+      },
+      "id": "f7629f47-bc86-4220-9fca-2e872b364eca",
+      "name": "MESSAGE TO NOT QUALIFIED",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        48,
+        -64
+      ],
+      "webhookId": "6a011ce4-2ad0-46db-93dc-fe3986c771f9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "70iXeIYBbnhPl9KL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "ec9bf605-c7ef-4862-9648-6d5b319ef185",
+      "name": "MANUAL REVIEW",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "hr@example.com",
+        "subject": "Manual Review Detected",
+        "emailType": "text",
+        "message": "=Dear HR Team,\n\nAn applicant has been identified for manual review following the initial recruitment screening process. All information has been sent to the company's database.\n\nThe applicant's profile requires further assessment to determine whether their qualifications, work experience, and overall suitability meet the requirements for the position applied for.\n\nPlease review the applicant's submitted information and CV manually and confirm the appropriate outcome:\n\nQualified – proceed to the offer stage.\nNot Qualified – send the standard unsuccessful application notification.\nFurther Review Required – request additional information or clarification from the applicant before making a final decision.\n\nKindly complete the manual assessment and update the applicant's recruitment status accordingly.\n\nThank you.\n\nKind regards,\n\nRecruitment / HR Team\n[Company Name]\n",
+        "options": {}
+      },
+      "id": "0c68771c-74f9-4ccf-b1b1-16b2694b50a9",
+      "name": "MESSAGE TO HR1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        272,
+        96
+      ],
+      "webhookId": "7bd734bf-4bb3-43cd-bccc-8f838a2beb1e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "70iXeIYBbnhPl9KL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json['Email Address'] }}",
+        "subject": "=Application Received – {{ $json['Interested Position'] }}",
+        "emailType": "text",
+        "message": "=Dear {{ $json['Full Name'] }},\n\nThank you for submitting your application for the {{ $json['Interested Position'] }} position at [Company Name].\n\nWe would like to confirm that we have successfully received your application and CV. Your submitted information is currently being reviewed by our recruitment team and the company will assess your qualifications, experience, and suitability for the position.\n\nPlease note that the review process may take some time. Once the assessment has been completed, we will contact you with an update regarding the outcome of your application and any next steps, if applicable.\n\nWe appreciate your interest in joining [Company Name] and thank you for your patience while we complete the review process.\n\nKind regards,\n\nHuman Resources / Recruitment Team\n[Company Name]\n",
+        "options": {}
+      },
+      "id": "49ded9f5-b831-4d80-ad69-a59a308f42e8",
+      "name": "NOTIFY CLIENT OF MANUAL REVIEW",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        688,
+        192
+      ],
+      "webhookId": "db6736c9-1497-4cab-9bf4-513b18d7dad0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "70iXeIYBbnhPl9KL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "RECRUITMENT FORM DATABASE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1861008652,
+          "mode": "list",
+          "cachedResultName": "Sheet3",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1861008652"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Full Name": "={{ $json['Full Name'] }}",
+            "Phone Address": "={{ $json['Phone Number'] }}",
+            "Email Address": "={{ $json['Email Address'] }}",
+            "Interested Position": "={{ $json['Interested Position'] }}",
+            "Qualifications": "={{ $json.Qualifications }}",
+            "Work Experience": "={{ $json['Work Experience'] }}",
+            "Years of Experience": "={{ $json['Years of Experience'] }}",
+            "Location": "={{ $json.Location }}",
+            "Status": "={{ $json[' Status'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone Address",
+              "displayName": "Phone Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Address",
+              "displayName": "Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Interested Position",
+              "displayName": "Interested Position",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Qualifications",
+              "displayName": "Qualifications",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Work Experience",
+              "displayName": "Work Experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Years of Experience",
+              "displayName": "Years of Experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f5f337e0-41a4-4d82-a73d-eb2c50f86f63",
+      "name": "MANUAL REVIEW DATABASE",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        416,
+        320
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "snHq6T7gSXo1o380",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "APPLICATION FORM": {
+      "main": [
+        [
+          {
+            "node": "Determine Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Determine Status": {
+      "main": [
+        [
+          {
+            "node": "ALL APPLICANTS DATABASE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ALL APPLICANTS DATABASE": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "AUTOMATICALLY QUALIFIED",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NOT QUALIFIED",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "MANUAL REVIEW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AUTOMATICALLY QUALIFIED": {
+      "main": [
+        [
+          {
+            "node": "AUTOMATICALLY QUALIFIED DATABASE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AUTOMATICALLY QUALIFIED DATABASE": {
+      "main": [
+        [
+          {
+            "node": "MESSAGE TO HR",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Copy Offer Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy Offer Template": {
+      "main": [
+        [
+          {
+            "node": "Fill Offer Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fill Offer Letter": {
+      "main": [
+        [
+          {
+            "node": "Export Offer PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export Offer PDF": {
+      "main": [
+        [
+          {
+            "node": "OFFER MESSAGE TO QUALIFIED CANDIDATE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NOT QUALIFIED": {
+      "main": [
+        [
+          {
+            "node": "MESSAGE TO NOT QUALIFIED",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MANUAL REVIEW": {
+      "main": [
+        [
+          {
+            "node": "MESSAGE TO HR1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "NOTIFY CLIENT OF MANUAL REVIEW",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "MANUAL REVIEW DATABASE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "203fea99-db76-4df1-b4df-ab991169ec2a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "REDACTED_INSTANCE_ID"
+  },
+  "nodeGroups": [],
+  "id": "REDACTED_WORKFLOW_ID",
+  "tags": []
+}
