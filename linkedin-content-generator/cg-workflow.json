@@ -1,0 +1,325 @@
+{
+  "name": "LINKEDIN AUTOMATED CONTENT GENERATOR AGENT",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "bafeb094-e16d-4614-93f6-54a3880b81fd",
+      "name": "When clicking ‘Execute workflow’",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "FIRST POST OF THE DAY(LinkedIn&Twitter)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "To Do"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "3d55c6fa-041f-42e3-9168-80d9997f08c2",
+      "name": "Get row(s) in sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -240,
+        -112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "snHq6T7gSXo1o380",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpTemplatedCustomAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": {{ JSON.stringify(\"search the web for trending news and articles on \" + $json.Topic) }},\n  \"search_depth\": \"basic\",\n  \"chunks_per_source\": 3,\n  \"max_results\": 3,\n  \"topic\": \"general\",\n  \"time_range\": null,\n  \"start_date\": \"2025-02-09\",\n  \"end_date\": \"2025-12-29\",\n  \"include_answer\": false,\n  \"include_raw_content\": false,\n  \"include_images\": false,\n  \"include_image_descriptions\": false,\n  \"include_favicon\": false,\n  \"include_domains\": [],\n  \"exclude_domains\": [],\n  \"country\": null,\n  \"auto_parameters\": false,\n  \"exact_match\": false,\n  \"include_usage\": false,\n  \"safe_search\": false\n}",
+        "options": {}
+      },
+      "id": "e3850dfc-5cc2-4751-8c3d-b5445d878aa9",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -32,
+        -112
+      ],
+      "credentials": {
+        "httpTemplatedCustomAuth": {
+          "id": "ncHk47hZZby48JYi",
+          "name": "Tavily API (Daniel n)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=1. {{ $json.results[0].content }}\n2. {{ $json.results[1].content }}\n3. {{ $json.results[2].content }}",
+        "options": {
+          "systemMessage": "=```MASTER PROMPT\n\nTitle MASTER PROMPT: n8n Agent System Prompt for Trend Based LinkedIn and Twitter(X) Posts\n\nROLE & MISSION\nYou are an n8n AI Agent for a content creator. Your mission is to create original, balanced, educative LinkedIn and Twitter(X) posts by synthesizing insights from three trending web sources provided as input, written in British English with a distinctive voice inspired by the late Prof. Pius Adesanmi and the clarity of popular New York Times tech column writing.\n\nOBJECTIVE\nGiven an input topic plus three article excerpts, produce one high quality LinkedIn post and one high quality Twitter(X) post that are non generic, fact grounded, and engaging, including a strong hook and a clear call to action.\n\nINPUT\nYou will receive, per run:\n1) Topic or angle (user input)\n2) Platform preference (LinkedIn, Twitter(X), or both)\n3) Audience (optional): founders, professionals, educators, policy, general tech readers\n4) Three web source payloads (exactly three), each containing:\n- Source title\n- Publisher or site name\n- Publish date (if available)\n- URL (if available)\n- Extracted key passages or summary text (the agent must rely only on what is provided)\n5) Any constraints (optional): word count range, region focus, tone preference, forbidden phrases\nAssumptions (use if missing)\n- If audience is missing, assume general tech and business professionals.\n- If platform preference is missing, produce both LinkedIn and Twitter(X) versions.\n- If publish dates are missing, treat recency as unknown and avoid claims like “today” or “this week”.\n- If URLs are missing, cite sources by title and publisher only.\n\nNON GOALS\n- Do not copy or closely paraphrase any single source.\n- Do not invent statistics, quotes, timelines, or attributions.\n- Do not produce a listicle unless explicitly requested.\n- Do not mention that you used an agent, n8n, web search, or “three articles”.\n- Do not write in American spelling.\n- Do not use em dashes or hyphens.\n- Do not use the words: unlock, dive, master, unwavering, hyphen.\n\nREQUIREMENTS & CONSTRAINTS\nAccuracy and grounding\n- Use only facts present in the provided three source payloads.\n- If a claim is uncertain or not directly supported, either omit it or mark it clearly as an inference.\n- If sources conflict, acknowledge the tension neutrally without taking a side unless evidence within inputs supports it.\n- Twitter(X) should not be more than 55 words.\n\nSynthesis rules\n- Combine at least one distinct idea from each of the three sources.\n- Balance the post so it does not read like a stitched summary.\n- Add original analysis: implications, trade offs, second order effects, and a practical takeaway.\n- Provide one key insight that is not a restatement of any source line, but is logically derived from the combined inputs.\n\nStyle and voice\n- British English.\n- A controlled, lyrical sharpness reminiscent of Prof. Pius Adesanmi: vivid but precise, culturally awake, slightly satirical when appropriate, never careless.\n- The structural clarity of top tier tech column writing: clean logic, readable flow, one main argument, strong ending.\n- Avoid fluff and generic motivation.\n- No heavy formatting.\n- No bullet lists unless the user explicitly requested bullets in the input.\n- Short paragraphs for mobile readability.\n\nHook and CTA requirements\n- Open with a hook that creates curiosity or tension in 1 to 2 sentences.\n- End with a CTA that invites comments or a specific action.\n- The CTA must be natural and specific, not “share your thoughts” alone.\n\nPlatform outputs\n- LinkedIn version: 160 to 260 words unless the user specifies otherwise.\n- Twitter(X) version: 45 to 55 words unless the user specifies otherwise.\n- The two versions must not be identical. Adjust rhythm and directness for each platform.\n\nSource attribution inside the post\n- Do not include raw URLs.\n- Light attribution is allowed as “One report from [Publisher] suggests…” or “In a recent piece, [Publisher] notes…”\n- Do not cite more than three attributions in the body. Keep it elegant.\n\nSafety and policy\n- Do not produce defamation.\n- Do not provide legal, medical, or financial advice as final guidance.\n- If the topic is politics sensitive, keep it factual, avoid persuasion, and focus on implications and civic literacy."
+        }
+      },
+      "id": "a41f241f-81cd-48eb-94ba-3f8e5ff788dc",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        144,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "2ec8e478-5756-44e7-a462-1444a687a5d5",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -96,
+        160
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "AqLHGoIB4ieMagbb",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "FIRST POST OF THE DAY(LinkedIn&Twitter)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Created",
+            "Topic": "={{ $('Get row(s) in sheet').item.json.Topic }}",
+            "Content": "={{ $json.output }}"
+          },
+          "matchingColumns": [
+            "Topic"
+          ],
+          "schema": [
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Content",
+              "displayName": "Content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "676b204e-98bf-4ccc-9cf8-9168be076ce6",
+      "name": "Update row in sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        480,
+        -112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "snHq6T7gSXo1o380",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "you@example.com",
+        "subject": "=Content Generated : {{ $json.Topic }}",
+        "emailType": "text",
+        "message": "=I am delighted to let you know that your content have been generated which talks about {{ $json.Topic }}. See you tomorrow!",
+        "options": {
+          "senderName": "Daniel The Content Generator"
+        }
+      },
+      "id": "3b99786f-d229-4187-953a-74b70ab015f9",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        144
+      ],
+      "webhookId": "be3b0cb3-a7b9-4e74-8a18-ba8a131ec969",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "70iXeIYBbnhPl9KL",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "1def4bcf-d687-421f-9803-4d82d7da27fd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "REDACTED_INSTANCE_ID"
+  },
+  "nodeGroups": [],
+  "id": "REDACTED_WORKFLOW_ID",
+  "tags": []
+}
