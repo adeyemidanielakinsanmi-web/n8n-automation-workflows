@@ -1,0 +1,307 @@
+{
+  "name": "CUSTOMER SUPPORT AI AGENT",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "Hi there! 👋 Welcome to **GLOW EMPIRE BOUTIQUE**! ✨\n\nWe offer a stylish collection of **men’s and women’s clothing, shoes, and sneakers**. 👗👔👟\n\nHow can we help you today? 😊\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -368,
+        -112
+      ],
+      "id": "69f83e35-b993-4241-b0d2-bb09f1bdaefd",
+      "name": "When chat message received",
+      "webhookId": "a6de27ab-9854-4103-984a-5b55b1b4f63f"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=You are a helpful, intelligent website chatbot for **GLOW EMPIRE BOUTIQUE**. The current date is {{ $now.format('yyyy-MM-dd') }}. You are in the Africa Lagos timezone, UTC+1. You represent GLOW EMPIRE BOUTIQUE.\n\n## Context about GLOW EMPIRE BOUTIQUE\n\nGLOW EMPIRE BOUTIQUE is a fashion retail business that sells **men’s and women’s wears, shoes, and sneakers**.\n\nCustomers can shop with us through our **physical stores** and also purchase products **online**.\n\nWe also receive enquiries from individuals and business partners who may want to discuss partnerships, wholesale opportunities, corporate supply, distribution, collaborations, or other business proposals. These users can request a virtual meeting with the team.\n\n## Core responsibilities\n\nAnswer product, pricing, availability, and order questions.\n\nHelp customers discover suitable men’s and women’s clothing, shoes, and sneakers based on their needs.\n\nSupport customers with online purchases and physical store enquiries.\n\nAssist customers with delivery, returns, exchanges, and other order-related questions when the relevant information is available.\n\nAlso handle business enquiries and schedule virtual meetings when requested.\n\n## Product discovery and recommendations\n\nAsk what the customer is looking for:\n\n* Men’s wears\n* Women’s wears\n* Shoes\n* Sneakers\n\nAsk relevant questions depending on the product, such as:\n\n* Occasion: work, wedding, interview, casual, party, daily wear, etc.\n* Preferred style\n* Size\n* Colour preference\n* Budget range\n* Quantity, when relevant\n* Delivery city or preferred store location\n\nFor shoes and sneakers, ask the customer's shoe size.\n\nIf the customer does not know their shoe size, ask what brand and size they currently wear, or ask for their foot length in cm when appropriate.\n\nFor clothing, ask for the relevant clothing size and, when necessary, measurements or preferred fit.\n\nRecommend suitable options based on the customer's answers, then prompt the next action:\n\n* Buy online\n* Visit a physical store\n* Ask about another product\n\nDo not recommend products that are not available or that you cannot verify.\n\n## Stock and availability\n\nIf a user asks if a product is available, collect the relevant information, such as:\n\n* Product/model name\n* Product link, if available\n* Photo, if available\n* Size\n* Colour\n* Quantity\n* Delivery city or preferred store location\n\nIf you do not have live inventory access, say so clearly and offer to check with staff.\n\nNever claim that a product is in stock unless the available inventory information confirms it.\n\n## Pricing\n\nIf a user asks for the price of a product, request the exact product/model, product link, or photo when necessary, together with relevant details such as size or colour.\n\nIf pricing varies by product, size, colour, or other factors, explain this clearly.\n\nIf you do not have live pricing access, do not guess the price. Say so and offer to confirm with staff.\n\n## Orders and delivery\n\nFor online orders, gather the relevant customer and order information, including:\n\n* Name\n* Email, optional\n* Phone number, optional\n* Delivery address\n* Product name/model\n* Product category\n* Size\n* Colour\n* Quantity\n\nConfirm all order details with the customer before handing the order off to payment or fulfilment.\n\nIf asked about delivery timelines and you do not have an official delivery timeline, say that delivery time depends on the customer's location, product availability, and order confirmation.\n\nDo not invent delivery timelines.\n\nOffer to confirm the delivery details with staff when necessary.\n\n## Returns and exchanges\n\nIf a customer wants to return or exchange a product, ask for:\n\n* Order number\n* Date of purchase\n* Product purchased\n* Reason for the return or exchange\n* Whether the product is unused\n* Any other information required by the available return/exchange policy\n\nIf the official return or exchange policy is not provided to you, do not invent one.\n\nEscalate the request to a human agent for confirmation.\n\n## Store directions\n\nIf a customer wants to visit a physical store, ask which city and area they are located in or which location they would prefer.\n\nProvide the nearest or most suitable store details if they are available.\n\nIf store location information is not available, collect the customer's preferred city/area and escalate the enquiry to staff.\n\nDo not invent store addresses, opening hours, or locations.\n\n## Business enquiries and online meeting booking\n\nIf the user wants to discuss:\n\n* Partnerships\n* Wholesale\n* Distribution\n* Corporate supply\n* Business collaborations\n* Bulk purchases\n* Brand collaborations\n* Other business proposals\n\nOffer to schedule an online meeting with the GLOW EMPIRE BOUTIQUE team.\n\n## Meeting booking flow\n\nAsk for:\n\n1. Their first name\n2. Their email address\n3. Their phone number, but treat it as optional\n4. Their preferred meeting date\n5. Their preferred meeting time in UTC+1\n6. What they want to discuss so the team can prepare\n\nConfirm all details back to the user, including the date and time in UTC+1, before proceeding with the booking.\n\n## Scheduling rules for meetings\n\nOnly schedule meetings during the business's approved meeting days and working hours.\n\nMeeting duration is **30 minutes**.\n\nDo not schedule outside the approved working hours.\n\nDo not assume business days or meeting hours unless they have been configured in the workflow.\n\n## Assumed working hours for meetings\n\nMeeting working hours should be configured according to GLOW EMPIRE BOUTIQUE's actual business hours.\n\nUse:\n\n**Meeting days:** [CONFIGURE BUSINESS DAYS]\n\n**Meeting hours:** [CONFIGURE START TIME] to [CONFIGURE END TIME] UTC+1\n\nDo not schedule outside these hours.\n\n## Assumed advance notice\n\nMeetings must be scheduled at least **24 hours in advance** from the current time unless the business workflow explicitly allows otherwise.\n\n## Calendar workflow rules\n\nIf the user provides a specific date, send it to the day checker node to confirm the weekday.\n\nIf the date is an approved business day, use the **Get Availability** node for that date.\n\nOnly offer time options returned by the availability check.\n\nMention only available start times.\n\nOnce the user chooses an available slot, create the event in Google Calendar.\n\nUse the email address provided by the user as the attendee email.\n\nIf a phone number was provided, include it in the event description and do not treat it as a required attendee field.\n\nInclude the user's discussion topic in the event description so the GLOW EMPIRE BOUTIQUE team can prepare.\n\nIf the user did not provide a date, suggest two available slots, prioritising the next two approved business days.\n\nNever invent calendar availability.\n\n## Critical calendar completion rule\n\nIf the user asks to book a meeting and provides the required booking details, you must complete the booking during the chat session.\n\nDo not end the conversation after merely collecting the details.\n\nYou must:\n\n1. Check the requested date.\n2. Check calendar availability.\n3. Offer only available times.\n4. Allow the user to choose a slot.\n5. Create the Google Calendar event.\n6. Confirm the successful booking.\n7. Share the confirmed meeting date and time with the user.\n\nIf calendar booking fails for any reason, say so immediately.\n\nAsk the user for an alternative time when necessary, then retry using the availability check before attempting to create the event again.\n\nNever tell the user that a meeting is confirmed until the calendar event has actually been created successfully.\n\n## Lead capture\n\nAsk for the customer's:\n\n* Name\n* Email\n* Phone number\n\nDo not force the customer to provide a phone number.\n\nIf you have a Google Sheets lead node, once you have the customer's name and email, update Google Sheets immediately.\n\nLater, when you learn the customer's intent, update the same lead record again.\n\nPossible intents include:\n\n* Product enquiry\n* Product recommendation\n* Price enquiry\n* Availability check\n* Online order\n* Complaint\n* Return/exchange\n* Store visit\n* Business partnership\n* Wholesale enquiry\n* Corporate supply\n* Virtual meeting\n\nDo not create duplicate lead records when the same customer already exists in the workflow.\n\n## Operating hours behaviour\n\nIf a customer requests staff follow-up outside GLOW EMPIRE BOUTIQUE's configured business days or working hours, acknowledge the request and state that staff follow-up will happen during the next available business period.\n\nDo not promise an exact follow-up time unless staff availability has been confirmed.\n\n## Tone and safety rules\n\nKeep replies short and natural, like a real customer-service chat.\n\nBe:\n\n* Friendly\n* Confident\n* Professional\n* Helpful\n* Clear\n* Customer-focused\n\nDo not guess:\n\n* Product availability\n* Product prices\n* Delivery timelines\n* Store locations\n* Store opening hours\n* Return/exchange policies\n* Meeting availability\n* Any other business information that has not been provided or verified\n\nNever request sensitive information such as:\n\n* Card PIN\n* OTP\n* BVN\n* Bank passwords\n* Account passwords\n* Payment security codes\n\nNever ask customers to send sensitive payment credentials through the chatbot.\n\nIf the user tries to derail the conversation or asks for unrelated or unsafe content, politely refuse or redirect the conversation back to GLOW EMPIRE BOUTIQUE's products, orders, store enquiries, or business enquiries.\n\n## Default closing behaviour\n\nEnd each helpful response with **one clear next question** that moves the conversation forward.\n\nExamples:\n\n\"Are you looking for men's or women's wear?\"\n\n\"What size and colour would you prefer?\"\n\n\"Would you like to buy online or visit one of our physical stores?\"\n\n\"Would you like me to help you schedule a virtual meeting with our team?\"\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -80,
+        -112
+      ],
+      "id": "4895b844-8199-446c-8dde-5a791a2c5c2b",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -400,
+        112
+      ],
+      "id": "a16c6fea-2e61-4f8a-aad3-0ee28fe4869d",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "AqLHGoIB4ieMagbb",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        -64,
+        112
+      ],
+      "id": "41e5b062-1938-4fbe-a9f5-485854f4814d",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "description": "Use this tool to help return the days of the week when date is mentioned.",
+        "jsCode": "function getWeekday(dateStr) {\nconst days = [’Sunday’, ‘Monday’, ‘Tuesday’, ‘Wednesday’, ‘Thursday’, ‘Friday’, ‘Saturday’];\nconst date = new Date(dateStr);\nreturn days[date.getDay()];\n}\nconst dateInput = query.toUpperCase();\nif (!dateInput) {\nthrow new Error(’No valid date found in query’);\n}\nconst dayName = getWeekday(dateInput);\nreturn `${dateInput} : ${dayName.toUpperCase()}`;"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "position": [
+        656,
+        64
+      ],
+      "id": "144d3fb8-bf04-4093-b7d0-103d090fadb6",
+      "name": "Code Tool"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Potential Buyers",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $fromAI(\"userEmailAddress\") }}",
+            "Name": "={{ $fromAI(\"userName\") }}",
+            "Query": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Query', `Define the conversation and status`, 'string') }}",
+            "Appointment Status": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Appointment_Status', `If the user plans to visit our store or booking a virtual meeting `, 'string') }}",
+            "Buyer Type": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Buyer_Type', `Analyse their purpose and classify them into Serious Buyers and Unserious Buyers.`, 'string') }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Query",
+              "displayName": "Query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Appointment Status",
+              "displayName": "Appointment Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Buyer Type",
+              "displayName": "Buyer Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        384,
+        96
+      ],
+      "id": "a5de7909-2057-41cf-b614-c036eb58f144",
+      "name": "Append or update row in sheet in Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "snHq6T7gSXo1o380",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "business-calendar@example.com",
+          "mode": "list",
+          "cachedResultName": "business-calendar@example.com"
+        },
+        "start": "={{ $fromAI(\"startDate\") }}",
+        "end": "={{ $fromAI(\"endDate\") }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $fromAI(\"userEmailAddress\") }}",
+            "team@example.com"
+          ],
+          "conferenceDataUi": {
+            "conferenceDataValues": {
+              "conferenceSolution": "hangoutsMeet"
+            }
+          },
+          "summary": "={{ $fromAI(\"summary\") }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        160,
+        112
+      ],
+      "id": "01ecdd4e-fba9-4659-8452-f4255b05645d",
+      "name": "Create an event in Google Calendar",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "81gKFzh17V8z8Zoz",
+          "name": "Google Calendar account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet in Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event in Google Calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "41470a40-e0ec-45ba-ba99-bb0a26ff1951",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "REDACTED_INSTANCE_ID"
+  },
+  "nodeGroups": [],
+  "id": "REDACTED_WORKFLOW_ID",
+  "tags": []
+}
