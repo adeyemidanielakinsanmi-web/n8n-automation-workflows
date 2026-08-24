@@ -1,0 +1,261 @@
+{
+  "name": "LINKEDIN POST AND IMAGE GENERATOR AGENT (AI INDUSTRY)",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "LinkedIn Post",
+        "formDescription": "Come let's talk!",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Topic",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Target Audience",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -400,
+        -64
+      ],
+      "id": "e3d53fc8-cf70-4007-8343-c2dd103509ca",
+      "name": "On form submission",
+      "webhookId": "25b78583-bc5a-41d4-ba5c-1a8f2879bfd6"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -352,
+        144
+      ],
+      "id": "a3b89d34-2445-4f6b-b494-97053e6848eb",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "AqLHGoIB4ieMagbb",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_TAVILY_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query\": \"search the web for top article on {{ $json.Topic }} this should be suitable for {{ $json['Target Audience'] }}\",\n  \"search_depth\": \"basic\",\n  \"chunks_per_source\": 3,\n  \"max_results\": 1,\n  \"topic\": \"general\",\n  \"time_range\": null,\n  \"start_date\": \"2025-02-09\",\n  \"end_date\": \"2025-12-29\",\n  \"include_answer\": false,\n  \"include_raw_content\": false,\n  \"include_images\": false,\n  \"include_image_descriptions\": false,\n  \"include_favicon\": false,\n  \"include_domains\": [],\n  \"exclude_domains\": [],\n  \"country\": null,\n  \"auto_parameters\": false,\n  \"exact_match\": false,\n  \"include_usage\": false,\n  \"safe_search\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        -16,
+        144
+      ],
+      "id": "7bdcc084-786b-448e-b032-6a91919ad828",
+      "name": "Tavily"
+    },
+    {
+      "parameters": {
+        "url": "=https://image.pollinations.ai/prompt/{{ encodeURIComponent($json.output) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        560,
+        -64
+      ],
+      "id": "49af38d4-6632-49ad-ba25-b454c1c5f2ab",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "sendTo": "you@example.com",
+        "subject": "={{ $('On form submission').item.json.Topic }}",
+        "message": "={{ $('AI Agent (Content Generator)').item.json.output }}",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        784,
+        -64
+      ],
+      "id": "5f9bce1f-e2a1-4373-8d9b-32ac6a1dcb50",
+      "name": "Send a message",
+      "webhookId": "91173282-042c-41d2-b99c-ac66e359e5ae",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "70iXeIYBbnhPl9KL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Topic: {{ $json.Topic }}\nTarget Audience: {{ $json['Target Audience'] }}",
+        "options": {
+          "systemMessage": "=Prompt for the LinkedIn Agent\n\nOverview\n\nYou are an AI agent specialized in writing professional, educational, and engaging LinkedIn posts based on a topic and target audience provided by the user.\n\nObjective\nFor every request, conduct a real time web search using the Tavily tool to gather accurate and up to date information relevant to the topic. Use this research to produce a LinkedIn post tailored specifically to the stated target audience.\n\nContent Requirements\nBased on the research, generate a LinkedIn post that meets all of the following criteria:\n\nOpens with a strong, engaging hook\nProfessional and confident in tone\nClear, concise, and easy to read\nEducational, insightful, and non generic\nUses emojis sparingly and only where clearly relevant\nIncludes light source attribution where appropriate, for example “according to [source]”\nIncludes relevant hashtags to improve visibility and reach\nEnds with a clear and natural call to action, such as inviting comments, feedback, or discussion\nOutput Instructions\nOutput only the final LinkedIn post text\nDo not include explanations, analysis, notes, headings, or workflow steps\nDo not mention Tavily, web search, or how the content was generated\n\nExample Workflow\nReceive a topic and target audience\nUse Tavily to gather recent, relevant information\nSynthesize insights into a coherent point of view\nWrite a polished LinkedIn post with a hook, insight, attribution, hashtags, and a call to action"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -176,
+        -64
+      ],
+      "id": "b7b6b942-486b-47d5-9800-b8b992a089c1",
+      "name": "AI Agent (Content Generator)"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.output }}",
+        "options": {
+          "systemMessage": "=Prompt for the Image Prompt Agent\n\nOverview\nYou are an AI agent that converts LinkedIn posts into high quality visual prompt descriptions for generating marketing graphics and infographics here. These visuals are designed to accompany the post on LinkedIn and reinforce the core message in a clear, brand aligned, and visually engaging way.\n\nObjective\nGiven a LinkedIn post, your task is to:\nRead and understand the content of the post\nIdentify the central idea, insight, or key takeaway\nTranslate that idea into a single, clear image prompt suitable for AI text to image generation\n\nThe resulting visual must be a marketing style graphic, not a literal scene or photorealistic image, and should:\nVisually reinforce the main idea of the post\nBe appropriate for a professional LinkedIn feed\nFeel polished, modern, and thoughtfully designed\nOutput Instructions\nOutput only the final image prompt text\nDo not include quotation marks\nDo not repeat or paraphrase the LinkedIn post\nDo not add explanations, notes, or headings\nDo not include placeholders or generic filler text\nInclude numeric statistics if they appear in the original post\n\nStyle Guidelines\nThink like a brand designer or marketing creative\nPrefer clean, modern, and professional aesthetics\nVisual elements may include abstract concepts, icons, charts, data visuals, typography elements described in words, gradients, overlays, or modern illustrations\nYou may suggest layout structure such as split layouts, focal elements, or hierarchy\nAvoid hyperrealism or literal storytelling scenes\nAssume the prompt will be used in an AI image generation tool and be specific enough to guide composition, mood, and style\n\nExample Prompt Format\nA clean, modern flat style illustration showing interconnected nodes forming an upward arrow, symbolizing growth driven by intelligent automation, with soft gradients, minimal icons, and a professional technology brand aesthetic."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        192,
+        -64
+      ],
+      "id": "42b296f0-b730-402c-a49f-a8bf347c72ff",
+      "name": "AI Agent1 (Image Generator)"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (Content Generator)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent (Content Generator)",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI Agent1 (Image Generator)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tavily": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent (Content Generator)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent (Content Generator)": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1 (Image Generator)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1 (Image Generator)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "5ae6fff5-9fdb-4344-b909-09a109924a08",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "REDACTED_INSTANCE_ID"
+  },
+  "nodeGroups": [],
+  "id": "REDACTED_WORKFLOW_ID",
+  "tags": []
+}
