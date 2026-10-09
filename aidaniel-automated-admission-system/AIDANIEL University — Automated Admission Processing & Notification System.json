@@ -1,0 +1,932 @@
+{
+  "name": "AIDANIEL University — Automated Admission Processing & Notification System",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "uniai",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -368,
+        -32
+      ],
+      "id": "ed01f2fe-8214-4f15-b2d9-cde005cb7069",
+      "name": "Webhook",
+      "webhookId": "e43ed80c-4d91-4e4c-b471-e96dfbd91709"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Selection Switch').item.json['Email Address'] }}",
+        "subject": "Admission Offer – First Degree Programme | AIDANIEL UNIVERSITY OF TECHNOLOGY",
+        "emailType": "text",
+        "message": "=Dear {{ $json[\"Full Name\"] }},\n\nCONGRATULATIONS!\n\nWe are pleased to inform you that you have been successfully admitted into the First Degree Programme at AIDANIEL UNIVERSITY OF TECHNOLOGY.\n\nYour application has been carefully evaluated based on your UTME and Pre-Degree scores, and you have met the requirements for admission into the First Degree Programme.\n\nAdmission Details:\n\nApplicant ID: {{ $json[\"Applicant ID\"] }}\nProgramme/Course: {{ $json[\"Course\"] }}\nAdmission Status: FIRST DEGREE PROGRAMME\n\nYou are therefore invited to proceed with the necessary admission and registration procedures.\n\nPlease ensure that you follow the University's instructions regarding acceptance, documentation, registration, and payment of applicable fees.\n\nOnce again, congratulations on this achievement. We look forward to welcoming you to AIDANIEL UNIVERSITY OF TECHNOLOGY.\n\nYours faithfully,\n\nAdmissions Office\nAIDANIEL UNIVERSITY OF TECHNOLOGY",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        -176
+      ],
+      "id": "63a21334-9093-47a3-b6db-e5273454d34d",
+      "name": "First Degree Admission Letter",
+      "webhookId": "d18de325-1334-4a6c-a2fe-2a9c1fa59642",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmcGmnYdVHIMy4ps",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Selection Switch').item.json['Email Address'] }}",
+        "subject": "Application Status – AIDANIEL UNIVERSITY OF TECHNOLOGY",
+        "emailType": "text",
+        "message": "=Dear {{ $json[\"Full Name\"] }},\n\nAPPLICATION STATUS\n\nThank you for applying to AIDANIEL UNIVERSITY OF TECHNOLOGY.\n\nAfter reviewing your application and evaluating your UTME and Pre-Degree scores, we regret to inform you that you did not meet the minimum requirements for admission into either the First Degree Programme or the University School Diploma Programme at this time.\n\nApplication Details:\n\nApplicant ID: {{ $json[\"Applicant ID\"] }}\nProgramme/Course: {{ $json[\"Course\"] }}\nAdmission Status: NOT ADMITTED\n\nWe appreciate your interest in AIDANIEL UNIVERSITY OF TECHNOLOGY and the effort you made during the application process.\n\nWe encourage you to continue pursuing your educational goals and to consider future opportunities that may become available.\n\nWe wish you success in your future academic endeavors.\n\nYours faithfully,\n\nAdmissions Office\nAIDANIEL UNIVERSITY OF TECHNOLOGY",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        16
+      ],
+      "id": "bc90a64a-17dc-4a00-abd3-677af2a8ad68",
+      "name": "Not Admitted Letter ",
+      "webhookId": "392ee7ba-ee52-46ee-94cd-848151b75bb3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmcGmnYdVHIMy4ps",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Selection Switch').item.json['Email Address'] }}",
+        "subject": "Admission Offer – University School Diploma Programme | AIDANIEL UNIVERSITY OF TECHNOLOGY",
+        "emailType": "text",
+        "message": "=Dear {{ $json[\"Full Name\"] }},\n\nADMISSION OFFER\n\nWe are pleased to inform you that you have been offered admission into the University School Diploma Programme at AIDANIEL UNIVERSITY OF TECHNOLOGY.\n\nYour application has been evaluated based on your UTME and Pre-Degree scores. While your scores do not meet the requirements for direct admission into the First Degree Programme, you have qualified for admission into the University School Diploma Programme.\n\nAdmission Details:\n\nApplicant ID: {{ $json[\"Applicant ID\"] }}\nProgramme/Course: {{ $json[\"Course\"] }}\nAdmission Status: SCHOOL DIPLOMA PROGRAMME\n\nYou are encouraged to take advantage of this opportunity and proceed with the required admission and registration procedures.\n\nPlease follow the University's instructions regarding acceptance, documentation, registration, and payment of applicable fees.\n\nWe congratulate you on your admission and look forward to welcoming you to AIDANIEL UNIVERSITY OF TECHNOLOGY.\n\nYours faithfully,\n\nAdmissions Office\nAIDANIEL UNIVERSITY OF TECHNOLOGY",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        208
+      ],
+      "id": "08199346-e561-4cc6-8cb9-f0bc2ce5d65c",
+      "name": "School Diploma Offer Letter",
+      "webhookId": "e374aafc-e00d-495d-8ce1-d4203ea65f00",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmcGmnYdVHIMy4ps",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e409928e-e4c6-49de-a0ce-bb21bf4e5027",
+              "name": "Full Name",
+              "value": "={{ $json.body.data.fields[0].value }}",
+              "type": "string"
+            },
+            {
+              "id": "2113c8e2-bae8-4575-ba2d-cfa0c801e2b6",
+              "name": "Email Address",
+              "value": "={{ $json.body.data.fields[1].value }}",
+              "type": "string"
+            },
+            {
+              "id": "29f28a4f-1f51-42d9-b16d-290c83ac7a8e",
+              "name": " Phone Number",
+              "value": "={{ $json.body.data.fields[2].value }}",
+              "type": "string"
+            },
+            {
+              "id": "cfcb8a87-0b51-4aed-ad8d-a66fb555944c",
+              "name": "Date of Birth",
+              "value": "={{ $json.body.data.fields[3].value }}",
+              "type": "string"
+            },
+            {
+              "id": "d32cf84c-aaa2-469c-8831-16a249b098c6",
+              "name": "Gender",
+              "value": "={{ $json.body.data.fields[4].options[1].text }}",
+              "type": "string"
+            },
+            {
+              "id": "ec50d86c-8800-4abf-8ff3-661df424ba41",
+              "name": "Age",
+              "value": "={{ $json.body.data.fields[5].value }}",
+              "type": "number"
+            },
+            {
+              "id": "b7299775-f314-467b-a47b-0f6a4f63e2b1",
+              "name": "Home Address",
+              "value": "={{ $json.body.data.fields[6].value }}",
+              "type": "string"
+            },
+            {
+              "id": "687a5d5f-d201-446e-ab3d-0f213dba8dd8",
+              "name": "School",
+              "value": "={{ $json.body.data.fields[7].options[1].text }}",
+              "type": "string"
+            },
+            {
+              "id": "760f6915-d158-4d76-9a2e-4939e44cfc59",
+              "name": "Course",
+              "value": "={{ $json.body.data.fields[9].options[1].text }}",
+              "type": "string"
+            },
+            {
+              "id": "bf8e3f34-8c9c-4f8f-82ee-20aef28b4bd1",
+              "name": "Previous Educational Qualification",
+              "value": "={{ $json.body.data.fields[11].value }}",
+              "type": "string"
+            },
+            {
+              "id": "ff2a04a9-96a0-475f-9b1c-48ac403b76c0",
+              "name": "UTME Score",
+              "value": "={{ $json.body.data.fields[12].value }}",
+              "type": "number"
+            },
+            {
+              "id": "26a80d5d-b629-446e-ba90-889055fde9fd",
+              "name": "PRE-DEGREE Score",
+              "value": "={{ $json.body.data.fields[13].value }}",
+              "type": "number"
+            },
+            {
+              "id": "cf5588bf-c9bf-49c7-ade6-9bfbed0a3889",
+              "name": "Applicant ID",
+              "value": "={{ 'APP-' + $now.toFormat('yyyyMMdd') + '-' + Math.random().toString(36).substring(2, 8).toUpperCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "6dfc1849-a9ac-49be-806c-c43340b16b30",
+              "name": "Date/Time",
+              "value": "={{ $now }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -176,
+        -32
+      ],
+      "id": "b289ca51-ea87-49d0-9389-36249d3bfb1b",
+      "name": "set parm"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1606E4_G-UjDJeA4tnykp9O6qGqQO7TfTj2MbZ1zyZKk",
+          "mode": "list",
+          "cachedResultName": "University of Automations, Nigeria",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1606E4_G-UjDJeA4tnykp9O6qGqQO7TfTj2MbZ1zyZKk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 200769142,
+          "mode": "list",
+          "cachedResultName": "AUTOMATICALLY ADMITTED",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1606E4_G-UjDJeA4tnykp9O6qGqQO7TfTj2MbZ1zyZKk/edit#gid=200769142"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Applicant ID": "={{ $json['Applicant ID'] }}",
+            "Full Name": "={{ $json['Full Name'] }}",
+            "School": "={{ $json['Select your School'] }}",
+            "Course": "={{ $json.Course }}",
+            "UTME Score": "={{ $json['UTME Score'] }}",
+            "PRE-DEGREE Score": "={{ $json['PRE-DEGREE Score'] }}",
+            "Status": "={{ \n  Number($json[\"UTME Score\"]) >= 50 && Number($json[\"PRE-DEGREE Score\"]) >= 50\n    ? \"First Degree\"\n    : Number($json[\"PRE-DEGREE Score\"]) >= 50\n      ? \"School Diploma\"\n      : \"Not Admitted\"\n}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Applicant ID",
+              "displayName": "Applicant ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "School",
+              "displayName": "School",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Course",
+              "displayName": "Course",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "UTME Score",
+              "displayName": "UTME Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PRE-DEGREE Score",
+              "displayName": "PRE-DEGREE Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        592,
+        -176
+      ],
+      "id": "dfed76a5-5f9c-43bc-8744-1f1bed56919e",
+      "name": "Applicants Admitted for First Degree Database",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9Y5WDXf7M1wRmKCs",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1606E4_G-UjDJeA4tnykp9O6qGqQO7TfTj2MbZ1zyZKk",
+          "mode": "list",
+          "cachedResultName": "University of Automations, Nigeria",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1606E4_G-UjDJeA4tnykp9O6qGqQO7TfTj2MbZ1zyZKk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1116784146,
+          "mode": "list",
+          "cachedResultName": "NOT ADMITTED",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1606E4_G-UjDJeA4tnykp9O6qGqQO7TfTj2MbZ1zyZKk/edit#gid=1116784146"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Applicant ID": "={{ $('set parm').item.json['Applicant ID'] }}",
+            "Full Name": "={{ $('set parm').item.json['Full Name'] }}",
+            "School": "={{ $('set parm').item.json.School }}",
+            "Course": "={{ $('set parm').item.json.Course }}",
+            "UTME Score": "={{ $('set parm').item.json['UTME Score'] }}",
+            "PRE-DEGREE Score": "={{ $('set parm').item.json['PRE-DEGREE Score'] }}",
+            "Status": "={{ \n  Number($json[\"UTME Score\"]) >= 50 && Number($json[\"PRE-DEGREE Score\"]) >= 50\n    ? \"First Degree\"\n    : Number($json[\"PRE-DEGREE Score\"]) >= 50\n      ? \"School Diploma\"\n      : \"Not Admitted\"\n}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Applicant ID",
+              "displayName": "Applicant ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "School",
+              "displayName": "School",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Course",
+              "displayName": "Course",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "UTME Score",
+              "displayName": "UTME Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PRE-DEGREE Score",
+              "displayName": "PRE-DEGREE Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        592,
+        16
+      ],
+      "id": "b466fc64-3e58-48ba-99d7-67b8f5618286",
+      "name": "Applicants Not Admitted Database",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9Y5WDXf7M1wRmKCs",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1606E4_G-UjDJeA4tnykp9O6qGqQO7TfTj2MbZ1zyZKk",
+          "mode": "list",
+          "cachedResultName": "University of Automations, Nigeria",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1606E4_G-UjDJeA4tnykp9O6qGqQO7TfTj2MbZ1zyZKk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1132896621,
+          "mode": "list",
+          "cachedResultName": "SCHOOL DIPLOMA",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1606E4_G-UjDJeA4tnykp9O6qGqQO7TfTj2MbZ1zyZKk/edit#gid=1132896621"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Applicant ID": "={{ $('set parm').item.json['Applicant ID'] }}",
+            "Full Name": "={{ $('set parm').item.json['Full Name'] }}",
+            "School": "={{ $('set parm').item.json.School }}",
+            "Course": "={{ $('set parm').item.json.Course }}",
+            "UTME Score": "={{ $('set parm').item.json['UTME Score'] }}",
+            "PRE-DEGREE Score": "={{ $('set parm').item.json['PRE-DEGREE Score'] }}",
+            "Status": "={{\n  Number($json[\"UTME Score\"]) >= 50 && Number($json[\"PRE-DEGREE Score\"]) >= 50\n    ? \"First Degree\"\n    : Number($json[\"UTME Score\"]) < 50 && Number($json[\"PRE-DEGREE Score\"]) < 50\n      ? \"Not Admitted\"\n      : \"School Diploma\"\n}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Applicant ID",
+              "displayName": "Applicant ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "School",
+              "displayName": "School",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Course",
+              "displayName": "Course",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "UTME Score",
+              "displayName": "UTME Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PRE-DEGREE Score",
+              "displayName": "PRE-DEGREE Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        592,
+        208
+      ],
+      "id": "aa14e7f8-d484-4e39-b28e-fc5a731ec0c7",
+      "name": "Applicants Admitted for School Diploma Database",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9Y5WDXf7M1wRmKCs",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1606E4_G-UjDJeA4tnykp9O6qGqQO7TfTj2MbZ1zyZKk",
+          "mode": "list",
+          "cachedResultName": "University of Automations, Nigeria",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1606E4_G-UjDJeA4tnykp9O6qGqQO7TfTj2MbZ1zyZKk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "ALL APPLICANTS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1606E4_G-UjDJeA4tnykp9O6qGqQO7TfTj2MbZ1zyZKk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Full Name": "={{ $json['Full Name'] }}",
+            "Email Address": "={{ $json['Email Address'] }}",
+            "Phone Number": "={{ $json[' Phone Number'] }}",
+            "Date of Birth": "={{ $json['Date of Birth'] }}",
+            "Gender": "={{ $json.Gender }}",
+            "Age": "={{ $json.Age }}",
+            "Home Address": "={{ $json['Home Address'] }}",
+            "Select your School": "={{ $json.School }}",
+            "Course": "={{ $json.Course }}",
+            "Previous Educational Qualification": "={{ $json['Previous Educational Qualification'] }}",
+            "UTME Score": "={{ $json['UTME Score'] }}",
+            "PRE-DEGREE Score": "={{ $json['PRE-DEGREE Score'] }}",
+            "Applicant ID": "={{ $json['Applicant ID'] }}",
+            "Date/Time": "={{ $json['Date/Time'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Applicant ID",
+              "displayName": "Applicant ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Address",
+              "displayName": "Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date of Birth",
+              "displayName": "Date of Birth",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Gender",
+              "displayName": "Gender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Age",
+              "displayName": "Age",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Home Address",
+              "displayName": "Home Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Select your School",
+              "displayName": "Select your School",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Course",
+              "displayName": "Course",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Previous Educational Qualification",
+              "displayName": "Previous Educational Qualification",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UTME Score",
+              "displayName": "UTME Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "PRE-DEGREE Score",
+              "displayName": "PRE-DEGREE Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date/Time",
+              "displayName": "Date/Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        16,
+        -32
+      ],
+      "id": "28b8a6d5-5985-409a-9d54-658a14b13709",
+      "name": "All Applicants Database",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9Y5WDXf7M1wRmKCs",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ \n  Number($json[\"UTME Score\"]) >= 50 && \n  Number($json[\"PRE-DEGREE Score\"]) >= 50 \n  ? \"AUTOMATICALLY ADMITTED\"\n  : \"\"\n}}",
+                    "rightValue": "AUTOMATICALLY ADMITTED",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "b506f5c2-b62b-44ba-a20d-37374ecb0f70"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "FIRST DEGREE PROGRAMME"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1e453221-7255-4115-b342-42c3b3fc9890",
+                    "leftValue": "={{ \n  Number($json[\"UTME Score\"]) < 50 && \n  Number($json[\"PRE-DEGREE Score\"]) < 50 \n  ? \"NOT ADMITTED\"\n  : \"\"\n}}",
+                    "rightValue": "NOT ADMITTED",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "NOT ADMITTED"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1ec27ae5-b0a4-424a-a1ae-8d7a37f9352a",
+                    "leftValue": "={{ \n  (\n    Number($json[\"UTME Score\"]) > 50 && \n    Number($json[\"PRE-DEGREE Score\"]) < 50\n  ) ||\n  (\n    Number($json[\"UTME Score\"]) < 50 && \n    Number($json[\"PRE-DEGREE Score\"]) > 50\n  )\n  ? \"SCHOOL DIPLOMA\"\n  : \"\"\n}}",
+                    "rightValue": "SCHOOL DIPLOMA",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "SCHOOL DIPLOMA PROGRAMME"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        -48
+      ],
+      "id": "1420541b-47ca-4497-be3c-8ad2ceb3594f",
+      "name": "Selection Switch"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "set parm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set parm": {
+      "main": [
+        [
+          {
+            "node": "All Applicants Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Applicants Admitted for First Degree Database": {
+      "main": [
+        [
+          {
+            "node": "First Degree Admission Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Applicants Not Admitted Database": {
+      "main": [
+        [
+          {
+            "node": "Not Admitted Letter ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Applicants Admitted for School Diploma Database": {
+      "main": [
+        [
+          {
+            "node": "School Diploma Offer Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All Applicants Database": {
+      "main": [
+        [
+          {
+            "node": "Selection Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Selection Switch": {
+      "main": [
+        [
+          {
+            "node": "Applicants Admitted for First Degree Database",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Applicants Not Admitted Database",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Applicants Admitted for School Diploma Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "eb2bc14e-9c47-4ca4-b6fa-c25b1ea854b0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2e402d0fef2c5920740fca93610bd3f0e7c46ab4d8365361e3bdb6b74261aef6"
+  },
+  "nodeGroups": [],
+  "id": "Ioug9XNwDmS4RYLX",
+  "tags": []
+}
