@@ -1,0 +1,332 @@
+{
+  "name": "Escalation Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c38e8329-d429-47f2-9339-59d89bf00a75",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY",
+          "mode": "list",
+          "cachedResultName": "Verdant Homegoods Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1911631415,
+          "mode": "list",
+          "cachedResultName": "Escalations_Support _Log_Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit#gid=1911631415"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "Open"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "a18a1b94-0c71-446a-8625-828378dcc833",
+      "name": "Get open cases",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lZYRheMqT7NE6kNo",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const HOURS = 4;\nconst now = Date.now();\nconst out = [];\n\nfor (const item of $input.all()) {\n  const r = item.json;\n  if (r['Status'] !== 'Open') continue;\n  if (String(r['Reminder Sent']).toLowerCase() === 'yes') continue;\n\n  const m = String(r['Date/Time']).match(/(\\d{4}-\\d{2}-\\d{2}) (\\d{2}:\\d{2})/);\n  if (!m) continue;\n\n  const created = new Date(`${m[1]}T${m[2]}:00+01:00`).getTime();\n  const hours = (now - created) / 3600000;\n\n  if (hours >= HOURS) out.push({ json: { ...r, hours_open: Math.floor(hours) } });\n}\n\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "50e820ff-1914-4430-891a-d93996367978",
+      "name": "Find overdue"
+    },
+    {
+      "parameters": {
+        "chatId": "8347009388",
+        "text": "=Reminder: case {{ $json['Case ID'] }} has been waiting {{ $json.hours_open }} hours with no reply. \n\nCustomer: {{ $json['Customer Telegram Username'] }} Reason: {{ $json['Reason for Escalation'] }}  \n\nReply to the original email (subject [{{ $json['Case ID'] }}]) and the customer will get your answer on Telegram.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "5996a1c6-2e32-49b1-8629-186c792d65a1",
+      "name": "Remind owner",
+      "webhookId": "01285c34-428d-4bcd-8d1b-529ff32bf5bd",
+      "credentials": {
+        "telegramApi": {
+          "id": "6LZQZQw4N9X6EtFh",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY",
+          "mode": "list",
+          "cachedResultName": "Verdant Homegoods Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1911631415,
+          "mode": "list",
+          "cachedResultName": "Escalations_Support _Log_Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit#gid=1911631415"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Case ID": "={{ $('Find overdue').item.json['Case ID'] }}",
+            "Reminder Sent": "Yes"
+          },
+          "matchingColumns": [
+            "Case ID"
+          ],
+          "schema": [
+            {
+              "id": "Case ID",
+              "displayName": "Case ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date/Time",
+              "displayName": "Date/Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Customer Telegram Username",
+              "displayName": "Customer Telegram Username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Chat ID",
+              "displayName": "Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Customer's Question",
+              "displayName": "Customer's Question",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Reason for Escalation",
+              "displayName": "Reason for Escalation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Assigned To",
+              "displayName": "Assigned To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Gmail Thread ID",
+              "displayName": "Gmail Thread ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Reminder Sent",
+              "displayName": "Reminder Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Resolution",
+              "displayName": "Resolution",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        0
+      ],
+      "id": "141e5dfe-6c76-4e7e-b974-3ef881cf6910",
+      "name": "Mark reminded",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lZYRheMqT7NE6kNo",
+          "name": "Google Sheets account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get open cases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get open cases": {
+      "main": [
+        [
+          {
+            "node": "Find overdue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find overdue": {
+      "main": [
+        [
+          {
+            "node": "Remind owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remind owner": {
+      "main": [
+        [
+          {
+            "node": "Mark reminded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "ff645c81-4094-45a4-8533-036f80a6987f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2e402d0fef2c5920740fca93610bd3f0e7c46ab4d8365361e3bdb6b74261aef6"
+  },
+  "nodeGroups": [],
+  "id": "bz0KWwBc3XdxbRa1",
+  "tags": []
+}

@@ -1,0 +1,352 @@
+{
+  "name": "Create Order (sub-workflow)",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "customer_name"
+            },
+            {
+              "name": "telegram_username"
+            },
+            {
+              "name": "phone"
+            },
+            {
+              "name": "address"
+            },
+            {
+              "name": "products"
+            },
+            {
+              "name": "order_total"
+            },
+            {
+              "name": "payment_method"
+            },
+            {
+              "name": "shipping_zone"
+            },
+            {
+              "name": "gift_wrap"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -208,
+        -48
+      ],
+      "id": "b38e35ed-4c3f-4b1f-a94d-d3a316448f89",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY",
+          "mode": "list",
+          "cachedResultName": "Verdant Homegoods Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Order_Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        16,
+        -48
+      ],
+      "id": "d49233b5-fa21-4549-a635-2a311187dfa5",
+      "name": "Get existing orders",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lZYRheMqT7NE6kNo",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const existing = $('Get existing orders').all().map(i => i.json['Order ID']);\nconst input = $('When Executed by Another Workflow').first().json;\nconst method = String(input.payment_method || '').toLowerCase();\n\nlet id;\ndo {\n  id = 'VHG-' + String(Math.floor(1000 + Math.random() * 9000));\n} while (existing.includes(id));\n\nreturn [{\n  json: {\n    ...input,\n    order_id: id,\n    date_time: $now.setZone('Africa/Lagos').toFormat('yyyy-MM-dd HH:mm'),\n    payment_status: method.includes('paystack') ? 'Awaiting confirmation' : 'Pending',\n    order_status: 'New'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -48
+      ],
+      "id": "1c98d303-561f-476f-ada2-6bc9cb6f49ef",
+      "name": "Generate ID"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY",
+          "mode": "list",
+          "cachedResultName": "Verdant Homegoods Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Order_Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Order ID": "={{ $json.order_id }}",
+            "Date/Time": "={{ $json.date_time }}",
+            "Customer Name": "={{ $json.customer_name }}",
+            "Telegram Username/Chat ID": "={{ $json.telegram_username }}",
+            "Phone Number": "={{ $json.phone }}",
+            "Delivery Address": "={{ $json.address }}",
+            "Products Ordered (SKU + qty)": "={{ $json.products }}",
+            "Order Total (₦)": "={{ $json.order_total }}",
+            "Payment Method": "={{ $json.payment_method }}",
+            "Payment Status": "={{ $json.payment_status }}",
+            "Shipping Zone": "={{ $json.shipping_zone }}",
+            "Gift Wrap?": "={{ $json.gift_wrap }}",
+            "Order Status": "={{ $json.order_status }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Order ID",
+              "displayName": "Order ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date/Time",
+              "displayName": "Date/Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Telegram Username/Chat ID",
+              "displayName": "Telegram Username/Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Delivery Address",
+              "displayName": "Delivery Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Products Ordered (SKU + qty)",
+              "displayName": "Products Ordered (SKU + qty)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order Total (₦)",
+              "displayName": "Order Total (₦)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Payment Method",
+              "displayName": "Payment Method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Payment Status",
+              "displayName": "Payment Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Shipping Zone",
+              "displayName": "Shipping Zone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Gift Wrap?",
+              "displayName": "Gift Wrap?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order Status",
+              "displayName": "Order Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        496,
+        -48
+      ],
+      "id": "be9b9cb7-aec8-41b3-b293-6ddb7c9755d6",
+      "name": "Append order",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lZYRheMqT7NE6kNo",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "94320eca-6dba-413b-b5f7-c56343bec855",
+              "name": "result",
+              "value": "=Order created. Order ID: {{ $('Generate ID').first().json.order_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        720,
+        -48
+      ],
+      "id": "ec1eeeb8-bc64-40b4-8338-486dbd6569f4",
+      "name": "Return result"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get existing orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get existing orders": {
+      "main": [
+        [
+          {
+            "node": "Generate ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate ID": {
+      "main": [
+        [
+          {
+            "node": "Append order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append order": {
+      "main": [
+        [
+          {
+            "node": "Return result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5a80d59f-229b-495e-863e-c48e3004830a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2e402d0fef2c5920740fca93610bd3f0e7c46ab4d8365361e3bdb6b74261aef6"
+  },
+  "nodeGroups": [],
+  "id": "kiVfZC1szwPW1Vm8",
+  "tags": []
+}

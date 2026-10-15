@@ -1,0 +1,430 @@
+{
+  "name": "Escalation Reply Watcher",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "q": "subject:ESC-"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -272,
+        -48
+      ],
+      "id": "3fb1b3c3-11fc-45dc-988c-cb27283c415c",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmcGmnYdVHIMy4ps",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY",
+          "mode": "list",
+          "cachedResultName": "Verdant Homegoods Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1911631415,
+          "mode": "list",
+          "cachedResultName": "Escalations_Support _Log_Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit#gid=1911631415"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Gmail Thread ID",
+              "lookupValue": "={{ $json.threadId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        144,
+        -64
+      ],
+      "id": "298813a4-2c58-4377-b2ce-08fde97e3f71",
+      "name": "Find case",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lZYRheMqT7NE6kNo",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "de799881-d3c4-42cc-aae0-861aa3dfde08",
+              "leftValue": "={{ $json.Status }}",
+              "rightValue": "Open",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        368,
+        -64
+      ],
+      "id": "41b421d9-d085-42fa-91b0-7098ffd049d2",
+      "name": "Is open"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7f84a3ca-9a7b-4b73-bbf1-73018971da13",
+              "leftValue": "={{ $json.Subject }}",
+              "rightValue": "Re:",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -80,
+        -48
+      ],
+      "id": "cc7cdd33-164b-4ddf-81f7-f374bfe92753",
+      "name": "Is reply"
+    },
+    {
+      "parameters": {
+        "jsCode": "const mail = $('Is reply').first().json;\nconst raw = mail.text || mail.snippet || '';\nconst cut = raw.split(/\\r?\\nOn .*wrote:|\\r?\\n>|\\r?\\nFrom:/)[0].trim();\nconst safe = cut.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nreturn [{ json: { reply: cut, reply_html: safe } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        -160
+      ],
+      "id": "f47e2354-a47d-4622-90af-66fe3e113bd9",
+      "name": "Clean reply"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Find case').first().json['Chat ID'] }}",
+        "text": "=Update on your request ({{ $('Find case').first().json['Case ID'] }}):\n\n{{ $json.reply_html }}\n\nReply here if you need anything else.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        816,
+        -160
+      ],
+      "id": "87a21c7a-4204-4ad5-b093-7777e9459f45",
+      "name": "Notify customer",
+      "webhookId": "cdc0eabc-bcf4-4ee2-8f5d-f36791b1937e",
+      "credentials": {
+        "telegramApi": {
+          "id": "6LZQZQw4N9X6EtFh",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY",
+          "mode": "list",
+          "cachedResultName": "Verdant Homegoods Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1911631415,
+          "mode": "list",
+          "cachedResultName": "Escalations_Support _Log_Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit#gid=1911631415"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Case ID": "={{ $('Find case').first().json['Case ID'] }}",
+            "Status": "Resolved",
+            "Resolution": "={{ $('Clean reply').first().json.reply }}"
+          },
+          "matchingColumns": [
+            "Case ID"
+          ],
+          "schema": [
+            {
+              "id": "Case ID",
+              "displayName": "Case ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date/Time",
+              "displayName": "Date/Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Customer Telegram Username",
+              "displayName": "Customer Telegram Username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Chat ID",
+              "displayName": "Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Customer's Question",
+              "displayName": "Customer's Question",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Reason for Escalation",
+              "displayName": "Reason for Escalation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned To",
+              "displayName": "Assigned To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Gmail Thread ID",
+              "displayName": "Gmail Thread ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Reminder Sent",
+              "displayName": "Reminder Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Resolution",
+              "displayName": "Resolution",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1040,
+        -160
+      ],
+      "id": "6ff308d6-c500-404d-9a06-d6e166721b14",
+      "name": "Close case",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lZYRheMqT7NE6kNo",
+          "name": "Google Sheets account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Is reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find case": {
+      "main": [
+        [
+          {
+            "node": "Is open",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is reply": {
+      "main": [
+        [
+          {
+            "node": "Find case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is open": {
+      "main": [
+        [
+          {
+            "node": "Clean reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean reply": {
+      "main": [
+        [
+          {
+            "node": "Notify customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify customer": {
+      "main": [
+        [
+          {
+            "node": "Close case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "6245a799-49f2-4a59-ab50-9ca9209e0c2e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2e402d0fef2c5920740fca93610bd3f0e7c46ab4d8365361e3bdb6b74261aef6"
+  },
+  "nodeGroups": [],
+  "id": "9b8mhIzUsiE7XY6V",
+  "tags": []
+}

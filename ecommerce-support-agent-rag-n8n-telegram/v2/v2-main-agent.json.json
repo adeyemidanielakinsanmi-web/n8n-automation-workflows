@@ -1,0 +1,847 @@
+{
+  "name": "E-commerce Support Agent: RAG + n8n + Telegram v2",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1wAASFcFlf_FhV9l62LrHxXhJAgKktFB1",
+          "mode": "list",
+          "cachedResultName": "VHKnowledgebase",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1wAASFcFlf_FhV9l62LrHxXhJAgKktFB1"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        -32
+      ],
+      "id": "424e430d-1c7c-46f5-9bcb-13f0d1abd1ef",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "2aJJ8LTAiEd1Jdqm",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        0,
+        -32
+      ],
+      "id": "7a3eea7c-a20b-41b1-904a-05a7d3635a30",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "2aJJ8LTAiEd1Jdqm",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1536
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -96,
+        192
+      ],
+      "id": "14c35eee-8174-4d5e-a118-07d4d5ee2e11",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        176,
+        192
+      ],
+      "id": "14a312f4-dc82-4f7f-b009-03a826d5483f",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        608,
+        112
+      ],
+      "id": "66b1d0a5-9622-4904-9615-797d165b1eda",
+      "name": "Telegram Trigger",
+      "webhookId": "37353272-8b8f-4807-bf3c-0548eefb177c",
+      "credentials": {
+        "telegramApi": {
+          "id": "6LZQZQw4N9X6EtFh",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9cd016c3-5af5-461b-bb31-8d04d1d56314",
+              "name": "Chat ID",
+              "value": "={{ $json.message.chat.id }}",
+              "type": "number"
+            },
+            {
+              "id": "f3e7e4fe-75a6-4978-bc78-9b74a1fc4887",
+              "name": "Message",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "d35687b8-9ba2-4da9-b305-2f7a46be6ba8",
+              "name": "Username",
+              "value": "={{ $('Telegram Trigger').item.json.message.from.username ? '@' + $('Telegram Trigger').item.json.message.from.username : 'Not set' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        832,
+        112
+      ],
+      "id": "913e95a2-489f-4617-a38c-20fa2805b2b3",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=CHAT ID: {{ $json['Chat ID'] }}\n\nMessage: {{ $json.Message }}\n\nUsername: {{ $json.Username }}\n\n",
+        "options": {
+          "systemMessage": "=ROLE\nYou are the support assistant for Verdant Homegoods, a boutique online store selling sustainable, eco-friendly home and kitchen products, shipping across Nigeria, Ghana, and Benin Republic. You help customers with orders and tracking, shipping and returns, and product details (pricing, materials, care instructions).\n\nRULES\nBe concise: 1-3 sentences per reply. Be warm but professional.\nNever invent facts, prices, or policies. If you don't know something, say so plainly and share the contact channel.\nNever call Create_Order until you have collected every required order detail and the customer has confirmed the order summary.\n\nMESSAGE DATA\nEvery message starts with the customer's current Telegram username and Telegram chat ID, followed by what the customer wrote. Always take the username and chat ID from the CURRENT message, never from earlier messages in the conversation. Never ask the customer for their username. If the username is \"Not set\", pass \"Not set\" and ask the customer for a contact name or phone number instead. The chat ID is not a phone number: never use it as one, and always ask the customer for their phone number and save exactly what they give you.\n\nTOOLS\nUse [knowledge_base_lookup1] for any question about FAQs, shipping rates, returns, or product details. Prefer retrieving the answer over guessing.\n\nUse [Create_Order] to place an order. Collect, a couple of details at a time: customer name, phone number, delivery address, products (SKU + quantity), payment method, and gift wrap (Yes/No). Work out the shipping zone yourself from the delivery address (Lagos/Ogun, Other Nigerian states, or Ghana/Benin Republic) and only ask if it is unclear. Use the username from the message data for telegram_username. Do not accept cash on delivery outside Lagos or for orders of N50,000 and above. Calculate the order total from the product prices plus shipping and gift wrap, and read the full summary back to the customer, with the total formatted like ₦19,000. Wait for the customer to confirm before calling the tool. The Order ID is generated by the tool: never create, change or guess an Order ID. After the tool returns, give the customer exactly the Order ID it returned.\n\nUse [Get_Order] with the Order ID to fetch a customer's order when they ask about order status or tracking. Only share details for the Order ID the customer provides. If no order is found, say so and do not invent a status.\n\nUse [Appointments_sheets] to note and log showroom appointments. Collect the customer's name, phone number, and preferred date and time (Tuesdays to Fridays only) before logging. Use the username from the message data for the Telegram username.\n\nUse [Escalate_Case] for anything outside the knowledge base: bulk or wholesale pricing, discounts, custom orders, partnership inquiries, complaints about a specific past order, damaged items, or any refund outside the 7-day window. When a request matches, call it immediately in the same turn. Do not ask for permission, do not offer other options first, and do not answer from your own knowledge. Pass customer_name (or \"Unknown\"), telegram_username and chat_id from the message data, question (the customer's own words), and reason (a short label such as \"Wholesale request\", \"Discount request\", \"Damaged item\" or \"Refund outside window\"). The Case ID is generated by the tool: never invent one, and always quote it exactly as returned. After the tool returns, tell the customer: \"I've passed this to our team (case [Case ID]). You'll get a reply here, usually within 4 business hours (Monday to Saturday, 9am to 6pm WAT).\" If the tool returns no Case ID or an error, tell the customer the request was passed to the team but the reference number is unavailable, and do not guess one.\n\nFORMAT\nPlain text, no markdown. End answers about bookings/orders/policies by offering further help.\n\nBOUNDARIES\nOnly discuss topics related to Verdant Homegoods. If asked anything else, politely say you can only help with Verdant Homegoods-related questions.\n\nKNOWLEDGE\n- Support: @VerdantHomegoodsBot on Telegram, Monday-Saturday 9am-6pm WAT\n- Shipping: Lagos/Ogun 1-2 business days (₦1,500); other Nigerian states 3-5 business days (₦3,000); Ghana/Benin Republic 7-10 business days (₦8,500). Free shipping in Lagos on orders above ₦30,000. Orders before 12pm WAT ship same day.\n- Payment: bank transfer, Paystack card payment, or cash on delivery (Lagos only, orders under ₦50,000)\n- Order changes: can be cancelled/changed within 2 hours of placing, before packing\n- Returns: 7-day window from delivery, item must be unused with tags/packaging intact. Non-returnable: opened food-safe items, \"final sale\" items, opened gift-wrapped items. Customer covers return shipping unless item arrived damaged/incorrect (then Verdant Homegoods covers it). Refunds processed in 5-7 business days to original payment method.\n- Damaged/incorrect items: report within 48 hours with a photo; free replacement or refund, customer's choice\n- Gift wrapping: +₦1,000, recycled kraft paper with jute tie\n- Showroom: by appointment only, Lekki Phase 1, Tuesdays-Fridays\n- Restocks: typically 2-3 weeks; can note customer interest for restock notification\n- Product catalog: refer to the product catalog document for SKU, price, material, care instructions, and dishwasher-safe status per item"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1056,
+        112
+      ],
+      "id": "60942c63-0990-4b1f-a3bf-793e508863cb",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        544,
+        336
+      ],
+      "id": "9a1f3c58-ba63-4ac2-98f8-d8ffddb4e266",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json['Chat ID'] }}",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        848,
+        352
+      ],
+      "id": "671276ce-ef46-4b2c-965b-90a6c5f68967",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1536
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        928,
+        528
+      ],
+      "id": "7c455be1-f0f0-4819-8040-ae602434b9be",
+      "name": "Embeddings OpenAI1",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "verdanthomegoods",
+          "mode": "list",
+          "cachedResultName": "verdanthomegoods"
+        },
+        "options": {
+          "pineconeNamespace": "officegoods"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        -32
+      ],
+      "id": "a4ebdb41-a907-40d9-91db-688b9caa2c74",
+      "name": "knowledge_base_lookup",
+      "credentials": {
+        "pineconeApi": {
+          "id": "Ru7Tv74LyY08zwAF",
+          "name": "Pinecone account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Use this tool to answer any question regarding the business",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "verdanthomegoods",
+          "mode": "list",
+          "cachedResultName": "verdanthomegoods"
+        },
+        "options": {
+          "pineconeNamespace": "officegoods"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        1040,
+        336
+      ],
+      "id": "e1c5faad-faf0-4d7c-a89f-77f1c9d37312",
+      "name": "knowledge_base_lookup1",
+      "credentials": {
+        "pineconeApi": {
+          "id": "Ru7Tv74LyY08zwAF",
+          "name": "Pinecone account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Edit Fields').item.json['Chat ID'] }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1424,
+        112
+      ],
+      "id": "38890661-e0ad-459b-b366-315e4d4f3d9b",
+      "name": "Send a text message",
+      "webhookId": "34f41401-7bdf-4eec-b818-7c99f42ee208",
+      "credentials": {
+        "telegramApi": {
+          "id": "6LZQZQw4N9X6EtFh",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY",
+          "mode": "list",
+          "cachedResultName": "Verdant Homegoods Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 174956485,
+          "mode": "list",
+          "cachedResultName": "Showroom_Appointments_Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit#gid=174956485"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Requested Date/Time": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Requested_Date_Time', `Date/Time`, 'string') }}",
+            "Customer Name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Customer_Name', `Customer Name`, 'string') }}",
+            "Telegram Username/Chat ID": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Telegram_Username_Chat_ID', `Telegram Username/Chat ID of the Customer `, 'string') }}",
+            "Phone Number\t\r": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Phone_Number__', `The Phone Number of the customer`, 'string') }}",
+            "Status\t": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Status_', ``, 'string') }}",
+            "Notes": "Order Status"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Requested Date/Time",
+              "displayName": "Requested Date/Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Telegram Username/Chat ID",
+              "displayName": "Telegram Username/Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone Number\t\r",
+              "displayName": "Phone Number\t\r",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status\t",
+              "displayName": "Status\t",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        2304,
+        416
+      ],
+      "id": "c62ed54d-65f0-4c57-8b32-cce6c970f0da",
+      "name": "Appointments_sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lZYRheMqT7NE6kNo",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY",
+          "mode": "list",
+          "cachedResultName": "Verdant Homegoods Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Order_Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Order ID",
+              "lookupValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('values0_Value', `Order ID gotten from the Customer`, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1856,
+        448
+      ],
+      "id": "fae5fb20-53cb-4835-9181-df8fb0b94c9d",
+      "name": "Get_Order",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lZYRheMqT7NE6kNo",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Creates a customer order after all details are collected and confirmed by the customer. Returns the Order ID",
+        "workflowId": {
+          "__rl": true,
+          "value": "kiVfZC1szwPW1Vm8",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/kiVfZC1szwPW1Vm8",
+          "cachedResultName": "Create Order (sub-workflow)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "customer_name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('customer_name', `The name of the Customer`, 'string') }}",
+            "telegram_username": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('telegram_username', `The telegram username of the customer`, 'string') }}",
+            "phone": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('phone', `The phone number of the customer`, 'string') }}",
+            "address": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('address', `The address of the customer`, 'string') }}",
+            "products": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('products', `The products ordered for by the customer`, 'string') }}",
+            "order_total": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('order_total', `The order total amount`, 'string') }}",
+            "payment_method": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('payment_method', `The payment method agreed by the customer`, 'string') }}",
+            "shipping_zone": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('shipping_zone', `The shipping zone of the customer`, 'string') }}",
+            "gift_wrap": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('gift_wrap', `Yes/No`, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telegram_username",
+              "displayName": "telegram_username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "address",
+              "displayName": "address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "products",
+              "displayName": "products",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "order_total",
+              "displayName": "order_total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "payment_method",
+              "displayName": "payment_method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "shipping_zone",
+              "displayName": "shipping_zone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "gift_wrap",
+              "displayName": "gift_wrap",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1376,
+        496
+      ],
+      "id": "48b25875-0a20-460c-bc36-2f7a4e337d1a",
+      "name": "Create_Order"
+    },
+    {
+      "parameters": {
+        "description": "Escalates anything outside the knowledge base to the team: logs a tracked case and emails the owner. Returns the Case ID.",
+        "workflowId": {
+          "__rl": true,
+          "value": "LUxaC5RCATOWstmG",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/LUxaC5RCATOWstmG",
+          "cachedResultName": "Escalate Case (sub-workflow)"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "customer_name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('customer_name', ``, 'string') }}",
+            "telegram_username": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('telegram_username', ``, 'string') }}",
+            "chat_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('chat_id', ``, 'string') }}",
+            "question": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('question', ``, 'string') }}",
+            "reason": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('reason', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telegram_username",
+              "displayName": "telegram_username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "question",
+              "displayName": "question",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "reason",
+              "displayName": "reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1648,
+        464
+      ],
+      "id": "56b9d9a9-9f21-488f-ad27-98c15746b919",
+      "name": "Escalate_Case"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "knowledge_base_lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "knowledge_base_lookup",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "knowledge_base_lookup",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "knowledge_base_lookup1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "knowledge_base_lookup1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Appointments_sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_Order": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create_Order": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalate_Case": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "29fed00f-f081-4aab-be9c-cd2deafaf334",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2e402d0fef2c5920740fca93610bd3f0e7c46ab4d8365361e3bdb6b74261aef6"
+  },
+  "nodeGroups": [],
+  "id": "3uiDGvN8kIeFIMNu",
+  "tags": []
+}

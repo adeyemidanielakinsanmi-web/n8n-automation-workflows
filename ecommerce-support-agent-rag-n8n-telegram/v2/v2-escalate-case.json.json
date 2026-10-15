@@ -1,0 +1,373 @@
+{
+  "name": "Escalate Case (sub-workflow)",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "customer_name"
+            },
+            {
+              "name": "telegram_username"
+            },
+            {
+              "name": "chat_id"
+            },
+            {
+              "name": "question"
+            },
+            {
+              "name": "reason"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -208,
+        -48
+      ],
+      "id": "f28248a6-fd70-4820-99ba-3882804117df",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5893d16a-9bd6-47ab-8640-de0b335358b1",
+              "name": "result",
+              "value": "=Case {{ $('Generate Case').first().json.case_id }} created and the team has been emailed.",
+              "type": "string"
+            },
+            {
+              "id": "e2f2a783-a9e9-44b0-811a-f1c650bcfc49",
+              "name": "case_id",
+              "value": "={{ $('Generate Case').first().json.case_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        944,
+        -48
+      ],
+      "id": "5e568608-89be-4ff6-b2ac-c3b123d8aba0",
+      "name": "Return result"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY",
+          "mode": "list",
+          "cachedResultName": "Verdant Homegoods Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1911631415,
+          "mode": "list",
+          "cachedResultName": "Escalations_Support _Log_Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit#gid=1911631415"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        16,
+        -48
+      ],
+      "id": "6f294172-dfea-46b8-82d8-34d80b874dbd",
+      "name": "Get existing cases",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lZYRheMqT7NE6kNo",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const existing = $('Get existing cases').all().map(i => i.json['Case ID']);\nconst input = $('When Executed by Another Workflow').first().json;\n\nlet id;\ndo {\n  id = 'ESC-' + String(Math.floor(1000 + Math.random() * 9000));\n} while (existing.includes(id));\n\nreturn [{\n  json: {\n    ...input,\n    case_id: id,\n    date_time: $now.setZone('Africa/Lagos').toFormat('yyyy-MM-dd HH:mm'),\n    status: 'Open'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -48
+      ],
+      "id": "75267a33-7211-4ed4-8f73-9a8960f51551",
+      "name": "Generate Case"
+    },
+    {
+      "parameters": {
+        "sendTo": "vede37s@gmail.com",
+        "subject": "=[{{ $json.case_id }}] Customer escalation: {{ $json.reason }}",
+        "emailType": "text",
+        "message": "=Case: {{ $json.case_id }} \nCustomer: {{ $json.customer_name }} ({{ $json.telegram_username }}) \nReason: {{ $json.reason }}  \n\nCustomer's message: {{ $json.question }}  \n\nReply to this email to answer the customer. Your reply will be sent to them on Telegram.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        464,
+        -48
+      ],
+      "id": "86032112-0009-429d-9247-014e38e81110",
+      "name": "Email owner",
+      "webhookId": "b3ffaa02-19cb-4b7d-9f62-1fa195e175b2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmcGmnYdVHIMy4ps",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY",
+          "mode": "list",
+          "cachedResultName": "Verdant Homegoods Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1911631415,
+          "mode": "list",
+          "cachedResultName": "Escalations_Support _Log_Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l8AK3e1Yy5BrPI3Lfiup72eC7qkhIz0tDOlD9YYlRlY/edit#gid=1911631415"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date/Time": "={{ $('Generate Case').first().json.date_time }}",
+            "Case ID": "={{ $('Generate Case').first().json.case_id }}",
+            "Customer Telegram Username": "={{ $('Generate Case').first().json.telegram_username }}",
+            "Chat ID": "={{ $('Generate Case').first().json.chat_id }}",
+            "Customer's Question": "={{ $('Generate Case').first().json.question }}",
+            "Reason for Escalation": "={{ $('Generate Case').first().json.reason }}",
+            "Status": "Open",
+            "Assigned To": "Owner",
+            "Reminder Sent": "No",
+            "Gmail Thread ID": "={{ $('Email owner').first().json.threadId }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Case ID",
+              "displayName": "Case ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date/Time",
+              "displayName": "Date/Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Customer Telegram Username",
+              "displayName": "Customer Telegram Username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Chat ID",
+              "displayName": "Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Customer's Question",
+              "displayName": "Customer's Question",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reason for Escalation",
+              "displayName": "Reason for Escalation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Assigned To",
+              "displayName": "Assigned To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Gmail Thread ID",
+              "displayName": "Gmail Thread ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reminder Sent",
+              "displayName": "Reminder Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Resolution",
+              "displayName": "Resolution",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        720,
+        -48
+      ],
+      "id": "2040df5a-1a1b-43f1-9349-a414647a72d6",
+      "name": "Log case",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lZYRheMqT7NE6kNo",
+          "name": "Google Sheets account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get existing cases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get existing cases": {
+      "main": [
+        [
+          {
+            "node": "Generate Case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Case": {
+      "main": [
+        [
+          {
+            "node": "Email owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email owner": {
+      "main": [
+        [
+          {
+            "node": "Log case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log case": {
+      "main": [
+        [
+          {
+            "node": "Return result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0b768c10-bc74-4742-aece-eac323b946bf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2e402d0fef2c5920740fca93610bd3f0e7c46ab4d8365361e3bdb6b74261aef6"
+  },
+  "nodeGroups": [],
+  "id": "LUxaC5RCATOWstmG",
+  "tags": []
+}
