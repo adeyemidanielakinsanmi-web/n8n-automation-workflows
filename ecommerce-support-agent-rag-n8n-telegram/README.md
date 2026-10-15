@@ -63,15 +63,10 @@ n8n, OpenAI (chat model and embeddings), Pinecone, Telegram Bot API (BotFather),
 ```
 .
 ├── README.md
-├── v1-workflow.json                  original build
-├── v2/
-│   ├── v2-main-agent.json
-│   ├── v2-create-order.json
-│   ├── v2-escalate-case.json
-│   ├── v2-escalation-reply-watcher.json
-│   └── v2-escalation-reminder.json
-├── docs/                             screenshots
-└── knowledge-base/                   sample business documents
+├── v1-workflow.json                      original build
+├── v2/                                   five v2 workflows
+├── docs/                                 screenshots
+└── VerdantHomegoods_Knowledgebase.pdf    sample business knowledge base
 ```
 
 ## Setup
@@ -80,7 +75,7 @@ n8n, OpenAI (chat model and embeddings), Pinecone, Telegram Bot API (BotFather),
 2. Create credentials for OpenAI, Pinecone, Telegram (token from BotFather), Google Drive, Google Sheets and Gmail, and attach them to the nodes.
 3. Create a Pinecone index and select it in both the ingestion and retrieval nodes. Both must use the same embedding model.
 4. Create the Google Sheets above and point each sheet node at the right tab.
-5. Create a Google Drive folder, set it as the Drive Trigger target, and add the documents from `knowledge-base/`.
+5. add the documents from knowledge-base/” to “add VerdantHomegoods_Knowledgebase.pdf from this repo.
 6. In the two sub-workflow tool nodes of the main agent, select the imported Create Order and Escalate Case workflows.
 7. Add your own chat ID in the reminder workflow's Telegram nodes and your own email in the Escalate Case email node.
 8. Paste the agent system message (role, rules, tool usage, boundaries, knowledge summary) into the AI Agent node, then publish the workflows.
