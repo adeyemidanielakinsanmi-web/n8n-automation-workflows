@@ -97,6 +97,8 @@ Tested with scripted conversations covering retrieval (delivery times, COD rules
 - **Payment status** should be confirmed by a payment webhook (for example Paystack), not typed in chat.
 - **Backup owner:** the second nudge goes to the owner only; a backup contact is a straightforward extension.
 - **Supabase (pgvector) version** of the retrieval layer is planned for comparison with Pinecone.
+- - **Priority tiers:** every case currently follows the same timers. Next: a deterministic reason-to-priority table, shorter timers for high-priority cases (damaged items, refund disputes), and a backup contact on a second channel after the second nudge.
+
 
 ## Author
 
