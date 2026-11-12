@@ -1,0 +1,68 @@
+{
+  "name": "Lead Machine: Error Alert",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d5b30b2a-67a8-4dbb-aace-97f9f567d486",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "sendTo": "vede37s@gmail.com",
+        "subject": "Lead Machine failed",
+        "message": "=Workflow: {{ $json.workflow.name }} and Error: {{ $json.execution.error.message }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "0f68726f-5cad-4045-9e1a-7861ad3ac3be",
+      "name": "Send a message",
+      "webhookId": "52ca0e22-86e2-4665-b4d8-e143bb3bd0cd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "WAdQWGO6f57esH3s",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d8be9cde-8ed6-4083-b15f-6eb5eecf9ce4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d179de62a0a610512013d83bfada125b4bc24808f22fa05d2cc15290eb1a35ca"
+  },
+  "nodeGroups": [],
+  "id": "i7lquYDrSCtIcFh2",
+  "tags": []
+}
