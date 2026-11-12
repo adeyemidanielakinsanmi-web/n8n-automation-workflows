@@ -24,6 +24,8 @@ Finding local businesses, checking which ones are worth contacting, tracking dow
 9. **Writes a personalized first line** for each emailable lead with an AI Agent (OpenAI chat model plus a structured output parser). The output includes the exact fact the line is based on, so it can be checked.
 10. **Waits for human approval.** Every line is saved with the status `Draft`. Only rows changed to `Approved` are ever sent.
 
+![Workflow overview](workflow-screenshot.png)
+
 ## The three workflows
 
 | Workflow | Purpose |
