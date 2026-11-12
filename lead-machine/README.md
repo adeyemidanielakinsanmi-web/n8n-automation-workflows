@@ -24,7 +24,7 @@ Finding local businesses, checking which ones are worth contacting, tracking dow
 9. **Writes a personalized first line** for each emailable lead with an AI Agent (OpenAI chat model plus a structured output parser). The output includes the exact fact the line is based on, so it can be checked.
 10. **Waits for human approval.** Every line is saved with the status `Draft`. Only rows changed to `Approved` are ever sent.
 
-Lead Machine_ Google Maps to Outreach.json
+![Workflow overview](LEAD%20MACHINE/Google%20MapstoOutreach.png)
 
 ## The three workflows
 
@@ -34,9 +34,13 @@ Lead Machine_ Google Maps to Outreach.json
 | **Lead Machine: Send Approved Emails** | Sends emails for approved rows only, marks them `Sent` with a timestamp, and emails a short summary |
 | **Lead Machine: Error Alert** | Emails an alert if the main workflow fails |
 
+![Error alert workflow](LEAD%20MACHINE/Error_Alert.png)
+
 ### Sending workflow
 
 Manual trigger, then Get row(s) filtered on `Status = Approved`, then a Limit (to keep daily volume low), then Gmail, then Update Row (`Status = Sent`, `Sent At`), then a summary email to the owner. A lead can never be emailed twice because its status changes to `Sent`.
+
+![Send approved emails workflow](LEAD%20MACHINE/Sendapprovedemails.png)
 
 ## Tech used
 
