@@ -4,6 +4,7 @@ n8n workflows I've built: booking systems, AI agents, and business process autom
 
 ## Projects
 
+- [Lead Machine: Google Maps to Outreach](lead-machine): n8n system that finds local businesses on Google Maps, scores and enriches the leads, writes AI-personalized first lines, and sends emails only after human approval.
 - [AIDANIEL Automated Admission System](./aidaniel-automated-admission-system): n8n workflow that automates applicant intake, score-based admission classification, and personalized Gmail notifications.
 - [HR Recruitment Automation](./hr-recruitment-automation)
 - [Customer Support AI Agent](./customer-support-ai-agent)
