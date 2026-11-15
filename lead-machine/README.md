@@ -21,8 +21,10 @@ Finding local businesses, checking which ones are worth contacting, tracking dow
    - Website only: the site is fetched and checked for an email address. Blocked or failed sites are handled without stopping the run.
    - No website: sent to a fallback path.
 8. **Splits leads with and without an email.** Leads with no email go to a "Manual Follow-up" tab for phone or social outreach.
-9. **Writes a personalized first line** for each emailable lead with an AI Agent (OpenAI chat model plus a structured output parser). The output includes the exact fact the line is based on, so it can be checked.
-10. **Waits for human approval.** Every line is saved with the status `Draft`. Only rows changed to `Approved` are ever sent.
+9. **Writes a personalized first line** for each emailable lead with an AI Agent (OpenAI chat model plus a structured output parser). The output includes the exact fact the line is based on.
+10. **Checks the numbers.** A Code node compares every figure in the line with the lead's source data (rating and review count). Any mismatch is marked `Needs review` instead of `Draft`.
+11. **Waits for human approval.** Only rows changed to `Approved` are ever sent.
+12. **Skips blank emails.** Before sending, rows with an empty or space-only email are filtered out, so nothing goes to a missing address.
 
 ![Workflow overview](LEAD%20MACHINE/Google%20MapstoOutreach.png)
 
