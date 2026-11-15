@@ -60,7 +60,7 @@
       "type": "n8n-nodes-base.limit",
       "typeVersion": 1,
       "position": [
-        272,
+        496,
         0
       ],
       "id": "197fb4e5-0b16-4b6b-bad4-ff53f1bdf1f2",
@@ -77,7 +77,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        496,
+        720,
         0
       ],
       "id": "2c76620d-3b98-4dfb-b397-0b75c038f9c9",
@@ -211,7 +211,7 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        720,
+        944,
         0
       ],
       "id": "a72490be-a9de-4b36-be5f-1166f2658502",
@@ -230,7 +230,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        944,
+        1168,
         0
       ],
       "id": "cff66b67-ed78-48b4-aec4-a17caa301fa2",
@@ -248,7 +248,7 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        1168,
+        1392,
         0
       ],
       "id": "f26df767-7963-48d2-8f22-4b106e48fdbe",
@@ -260,6 +260,40 @@
           "name": "Gmail account"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "ab701dd4-7318-4ed2-866a-5683be154818",
+              "leftValue": "={{ String($json.Email ?? '').trim() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        272,
+        16
+      ],
+      "id": "79d15c83-e90d-4d20-b150-bc905ad20b31",
+      "name": "If"
     }
   ],
   "pinData": {},
@@ -279,7 +313,7 @@
       "main": [
         [
           {
-            "node": "Limit",
+            "node": "If",
             "type": "main",
             "index": 0
           }
@@ -329,6 +363,17 @@
           }
         ]
       ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -336,7 +381,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "130a3a91-1c86-4a20-874b-e10ba2585d28",
+  "versionId": "a682e62d-0733-4c1d-ae7f-4ae6c07a2c3b",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "d179de62a0a610512013d83bfada125b4bc24808f22fa05d2cc15290eb1a35ca"
