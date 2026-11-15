@@ -1,0 +1,2759 @@
+{
+  "name": "Lead Machine: Google Maps to Outreach",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "={{ $json.Website }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "b1560f1a-1db9-48ac-9a72-9b349d7973c0",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        400,
+        -96
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const l = item.json;\n  return {\n    json: {\n      'Business Name': l['Business Name'] ?? l.name ?? null,\n      'Phone': l['Phone'] ?? l.phone ?? null,\n      'Email': l['Email'] ?? l.email ?? null,\n      'Website': l['Website'] ?? l.website ?? null,\n      'Lead Tier': l['Lead Tier'] ?? l.lead_tier ?? null,   // delete this line if you don't want the tag\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        -544
+      ],
+      "id": "2968e554-f5d0-459c-8da4-fce1c24d0648",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// Works whether each item is one business or an array of businesses\nconst businesses = items.flatMap(i => Array.isArray(i.json) ? i.json : [i.json]);\n\nconst first = (arr) => (Array.isArray(arr) && arr.length ? arr[0] : null);\n\n// Remove ?utm_... and other query strings from URLs\nconst cleanUrl = (url) => {\n  if (!url) return null;\n  try {\n    const u = new URL(url);\n    return (u.origin + u.pathname).replace(/\\/$/, '');\n  } catch {\n    return url;\n  }\n};\n\nconst seen = new Set();\nconst results = [];\n\nfor (const b of businesses) {\n  // Skip closed businesses and duplicates\n  if (b.permanentlyClosed || b.temporarilyClosed) continue;\n  if (!b.placeId || seen.has(b.placeId)) continue;\n  seen.add(b.placeId);\n\n  const emails = [...new Set((b.emails || []).map(e => e.trim().toLowerCase()))];\n  const dist = b.reviewsDistribution || {};\n  const totalReviews = b.reviewsCount || 0;\n  const negativeReviews = (dist.oneStar || 0) + (dist.twoStar || 0);\n  const negativePct = totalReviews\n    ? Math.round((negativeReviews / totalReviews) * 1000) / 10\n    : null;\n\n  const daysOpen = (b.openingHours || []).filter(h => !/closed/i.test(h.hours)).length;\n\n  const lead = {\n    name: (b.title || '').trim(),\n    category: b.categoryName || null,\n    services: (b.categories || []).join(', '),\n    address: b.address || null,\n    neighborhood: b.neighborhood || null,\n    city: b.city || null,\n    state: b.state || null,\n    postal_code: b.postalCode || null,\n    phone: b.phone || null,\n    email: emails[0] || null,\n    all_emails: emails.join(', '),\n    website: cleanUrl(b.website),\n    domain: b.domain || null,\n    instagram: first(b.instagrams),\n    facebook: first(b.facebooks),\n    linkedin: first(b.linkedIns),\n    twitter: first(b.twitters),\n    tiktok: first(b.tiktoks),\n    youtube: first(b.youtubes),\n    rating: b.totalScore ?? null,\n    reviews_count: totalReviews,\n    negative_reviews_pct: negativePct,\n    days_open_per_week: daysOpen,\n    hours: (b.openingHours || []).map(h => `${h.day}: ${h.hours}`).join(' | '),\n    latitude: b.location?.lat ?? null,\n    longitude: b.location?.lng ?? null,\n    google_maps_url: b.url || null,\n    place_id: b.placeId,\n    search_query: b.searchString || null,\n    scraped_at: b.scrapedAt || null,\n  };\n\n  // Simple lead score (max 100), adjust the weights to your niche\n  let score = 0;\n  if (lead.email) score += 30;\n  if (lead.phone) score += 10;\n  if (lead.website) score += 10;\n  if (lead.instagram) score += 10;\n  if (lead.rating >= 4.5) score += 10;\n  if (lead.reviews_count >= 100) score += 10;\n  if (lead.reviews_count >= 500) score += 10;\n  if (lead.negative_reviews_pct >= 5) score += 10; // possible pain point to pitch\n\n  lead.lead_score = score;\n  lead.lead_tier = score >= 70 ? 'Hot' : score >= 40 ? 'Warm' : 'Cold';\n\n  results.push({ json: lead });\n}\n\nreturn results;"
+      },
+      "id": "e272c40b-4695-4c29-a198-0e2b330084b0",
+      "name": "Clean Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Change 'Switch' to your Switch node's name and 1 to the output feeding the HTTP Request\nconst leads = $('Routes leads').all(1);\n\nconst BAD = /(\\.(png|jpe?g|gif|svg|webp|avif|ico|css|js|woff2?|ttf|pdf)$)|^(noreply|no-reply|donotreply|mailer-daemon|postmaster|sentry)@|(example\\.com|domain\\.com|sentry\\.io|wixpress\\.com|godaddy\\.com)$/i;\n\nconst findEmail = (html) => {\n  const text = html.replace(/&#64;|&commat;/g, '@').replace(/&amp;/g, '&');\n  const found = new Set();\n  for (const m of text.matchAll(/mailto:([^\"'?>\\s]+)/gi)) found.add(decodeURIComponent(m[1]).toLowerCase());\n  for (const m of text.matchAll(/[a-z0-9._%+-]+@[a-z0-9-]+(?:\\.[a-z0-9-]+)*\\.[a-z]{2,}/gi)) found.add(m[0].toLowerCase());\n  return [...found].find(e => !BAD.test(e) && !/@\\d+x\\./.test(e)) || null;\n};\n\nreturn $input.all().map((item, i) => {\n  const j = item.json || {};\n  const l = leads[item.pairedItem?.item ?? i]?.json || {};\n  const base = {\n    business_name: l['Business Name'] ?? l.name ?? l.title ?? null,\n    website: l['Website'] ?? l.website ?? null,\n  };\n\n  // Blocked or failed request: keep a short summary, drop the HTML\n  const raw = typeof j.data === 'string' ? j.data : (j.body || j.details?.body || '');\n  const blocked = j.error || j.details || j.httpCode || /Just a moment\\.\\.\\./.test(raw);\n  if (blocked) {\n    return { json: {\n      ...base,\n      email: null,\n      status: 'blocked',\n      http_code: j.details?.httpCode || j.httpCode || j.error?.status || null,\n      reason: /challenges\\.cloudflare\\.com/.test(raw + (j.details?.description || ''))\n        ? 'Cloudflare challenge' : (j.details?.message || j.error?.message || 'Request failed').slice(0, 80),\n    } };\n  }\n\n  const email = findEmail(raw);\n  return { json: { ...base, email, status: email ? 'ok' : 'no_email_found', http_code: 200, reason: null } };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        -96
+      ],
+      "id": "967d705a-fd91-4307-853c-9b2a76195e92",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1aOFRHX6EiAprvpHDd1hGJEQmVCMoB1nJNBiGcaNuzt0",
+          "mode": "list",
+          "cachedResultName": "LEAD GEN",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aOFRHX6EiAprvpHDd1hGJEQmVCMoB1nJNBiGcaNuzt0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Google Map Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aOFRHX6EiAprvpHDd1hGJEQmVCMoB1nJNBiGcaNuzt0/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Place ID": "={{ $('Clean Data').item.json.place_id }}",
+            "Email": "={{ $json.Email }}"
+          },
+          "matchingColumns": [
+            "Place ID"
+          ],
+          "schema": [
+            {
+              "id": "Business Name",
+              "displayName": "Business Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Services",
+              "displayName": "Services",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Address ",
+              "displayName": "Address ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Lead Score",
+              "displayName": "Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Lead Tier",
+              "displayName": "Lead Tier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Place ID",
+              "displayName": "Place ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Rating ",
+              "displayName": "Rating ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Review count",
+              "displayName": "Review count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Instagram",
+              "displayName": "Instagram",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1024,
+        -432
+      ],
+      "id": "d4e124ce-2187-46ab-a7cc-5590c20b57e1",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "jwmTMRtbieox9MUt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Business: {{ $('Saves leads to Google Sheets').item.json['Business Name'] }}\nRating: {{ $('Saves leads to Google Sheets').item.json['Rating '] }}  from {{ $('Saves leads to Google Sheets').item.json['Review count'] }} reviews\nServices: {{ $('Saves leads to Google Sheets').item.json.Services }}\nHours: {{ $('Clean Data').item.json.hours }}\nNeighborhood: {{ $('Saves leads to Google Sheets').item.json.Location }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You write personalized opening lines for cold emails to local businesses.\nRules:\n- Write one to two sentences.\n- Use only the facts provided. Never invent details such as customer complaints or services.\n- Be warm and specific. No flattery clichés and no exclamation marks.\n- Do not mention what the sender sells.\n- If a fact is missing or empty, skip it and use another.\n- Return only the line, with no quotes or extra text.\n\n- Base the line on exactly one fact and put that fact in detail_used, with its numbers.\n- Copy ratings, review counts and hours exactly as given. Never round or guess.\n- Only mention opening hours if the Hours field is provided and non-empty.\n- Maximum 40 words, two sentences.\n\n\n- Start with \"Hi [business name] team,\".\n- Write ratings as \"5-star rating\" or \"4.8-star rating\", never \"a 5 from 20 reviews\".\n- Write the line as natural speech, as a friendly person would say it.\n- In detail_used, write plain text with no quotation marks, for example: 5-star rating from 20 reviews.\n\nExample of the style (do not copy the facts):\nHi Sample Spa team, a 4.9-star rating from 139 reviews is a great sign that clients trust you."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1200,
+        -224
+      ],
+      "id": "88b132af-fc7c-4640-86de-ea5b6a67f758",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {
+          "webSearch": {
+            "searchContextSize": "medium"
+          }
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1232,
+        64
+      ],
+      "id": "bd449222-2f78-4ed6-a63d-ec2ccaafb28b",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"business_name\": {\n      \"type\": \"string\",\n      \"description\": \"Exact business name from the input\"\n    },\n    \"detail_used\": {\n      \"type\": \"string\",\n      \"description\": \"The single exact fact from the input that the line is based on, quoted with its numbers, e.g. '4.9 rating from 139 reviews'. Never a label like 'Quick note'.\"\n    },\n    \"first_line\": {\n      \"type\": \"string\",\n      \"description\": \"One or two sentences, under 40 words, using only facts from the input\"\n    }\n  },\n  \"required\": [\"business_name\", \"detail_used\", \"first_line\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1456,
+        48
+      ],
+      "id": "d90db2ca-a1b7-45a7-8023-a8d95b141b6b",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1aOFRHX6EiAprvpHDd1hGJEQmVCMoB1nJNBiGcaNuzt0",
+          "mode": "list",
+          "cachedResultName": "LEAD GEN",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aOFRHX6EiAprvpHDd1hGJEQmVCMoB1nJNBiGcaNuzt0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 267522364,
+          "mode": "list",
+          "cachedResultName": "Personalized Details of leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aOFRHX6EiAprvpHDd1hGJEQmVCMoB1nJNBiGcaNuzt0/edit#gid=267522364"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Business name ": "={{ $json.output.business_name }}",
+            "Detail used": "={{ $json.output.detail_used }}",
+            "First line": "={{ $json.output.first_line }}",
+            "Email": "={{ $('Append or update row in sheet').item.json.Email }}",
+            "Place ID": "={{ $('Append or update row in sheet').item.json['Place ID'] }}",
+            "Phone": "={{ $('Saves leads to Google Sheets').item.json.Phone }}",
+            "Status": "={{ $json.status }}",
+            "Check note": "={{ $json.check_note }}"
+          },
+          "matchingColumns": [
+            "Place ID"
+          ],
+          "schema": [
+            {
+              "id": "Business name ",
+              "displayName": "Business name ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Detail used",
+              "displayName": "Detail used",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "First line",
+              "displayName": "First line",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Place ID",
+              "displayName": "Place ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Sent At",
+              "displayName": "Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Check note",
+              "displayName": "Check note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        -224
+      ],
+      "id": "cea05ef1-4a8b-4b30-86cf-8e170657de0a",
+      "name": "Append or update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "jwmTMRtbieox9MUt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "1e27e0f9-1acd-40e7-9b56-304394179d9c",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        704,
+        112
+      ],
+      "id": "74531cb0-21fe-451f-a82d-18412e2448a7",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1aOFRHX6EiAprvpHDd1hGJEQmVCMoB1nJNBiGcaNuzt0",
+          "mode": "list",
+          "cachedResultName": "LEAD GEN",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aOFRHX6EiAprvpHDd1hGJEQmVCMoB1nJNBiGcaNuzt0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1582791067,
+          "mode": "list",
+          "cachedResultName": "Manual Follow-up",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aOFRHX6EiAprvpHDd1hGJEQmVCMoB1nJNBiGcaNuzt0/edit#gid=1582791067"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Place ID": "={{ $('Saves leads to Google Sheets').item.json['Place ID'] }}",
+            "Business Name": "={{ $('Saves leads to Google Sheets').item.json['Business Name'] }}",
+            "Phone": "={{ $('Saves leads to Google Sheets').item.json.Phone }}",
+            "Website": "={{ $('Saves leads to Google Sheets').item.json.Website }}",
+            "Instagram": "={{ $('Saves leads to Google Sheets').item.json.Instagram }}"
+          },
+          "matchingColumns": [
+            "Place ID"
+          ],
+          "schema": [
+            {
+              "id": "Business Name",
+              "displayName": "Business Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Instagram",
+              "displayName": "Instagram",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Place ID",
+              "displayName": "Place ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        928,
+        208
+      ],
+      "id": "a23c2b6c-6d63-4b28-9a82-6835d6b61598",
+      "name": "Append or update row in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "jwmTMRtbieox9MUt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "LEAD GEN (USA MED SPAS)",
+        "formDescription": "Lead Machine",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Keyword (Niche)",
+              "placeholder": "e.g Logistics"
+            },
+            {
+              "fieldLabel": "City",
+              "placeholder": "e.g Los Angeles"
+            },
+            {
+              "fieldLabel": "Number of places ",
+              "fieldType": "number"
+            }
+          ]
+        },
+        "options": {
+          "buttonLabel": "Submit"
+        }
+      },
+      "id": "cab65f5d-1c87-40f6-90de-86801a0cd844",
+      "name": "Takes a search",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -800,
+        0
+      ],
+      "webhookId": "98c4751e-3981-431e-bf3d-216d36f48191"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorId": {
+          "__rl": true,
+          "value": "WnMxbsRLNbPeYL6ge",
+          "mode": "id"
+        },
+        "customBody": "={\n    \"includeWebResults\": false,\n    \"language\": \"en\",\n    \"locationQuery\": \"{{ $json.City }}\",\n    \"maxCrawledPlacesPerSearch\": {{ $json['Number of places '] }},\n    \"maximumLeadsEnrichmentRecords\": 0,\n    \"scrapeDirectories\": false,\n    \"scrapeOrderOnline\": false,\n    \"scrapePlaceDetailPage\": false,\n    \"scrapeSocialMediaProfiles\": {\n        \"facebooks\": false,\n        \"instagrams\": false,\n        \"tiktoks\": false,\n        \"twitters\": false,\n        \"youtubes\": false\n    },\n    \"scrapeTableReservationProvider\": false,\n    \"searchStringsArray\": [\n        \"{{ $json['Keyword (Niche)'] }}\"\n    ],\n    \"skipClosedPlaces\": false,\n    \"verifyLeadsEnrichmentEmails\": false\n}",
+        "timeout": {},
+        "maxTotalChargeUsd": {},
+        "authentication": "apifyOAuth2Api"
+      },
+      "id": "6151bcb5-afc8-441b-950d-1359c4d79ee2",
+      "name": "Scrapes Google Maps",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        0
+      ],
+      "credentials": {
+        "apifyOAuth2Api": {
+          "id": "zDRJuRNJWxlJpesb",
+          "name": "Apify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "62cf8328-281b-4d68-abdd-c3b88e36605a",
+              "leftValue": "=",
+              "rightValue": "=",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": "={{ $json.lead_score >= 40 && !$json.permanentlyClosed && !$json.temporarilyClosed }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.4,
+      "position": [
+        -272,
+        0
+      ],
+      "id": "0ee3bdf0-e920-4787-8f51-57fcbaca40fe",
+      "name": "Filters out low scorers"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1aOFRHX6EiAprvpHDd1hGJEQmVCMoB1nJNBiGcaNuzt0",
+          "mode": "list",
+          "cachedResultName": "LEAD GEN",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aOFRHX6EiAprvpHDd1hGJEQmVCMoB1nJNBiGcaNuzt0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Google Map Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aOFRHX6EiAprvpHDd1hGJEQmVCMoB1nJNBiGcaNuzt0/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Business Name": "={{ $json.name }}",
+            "Services": "={{ $json.services }}",
+            "Category": "={{ $json.category }}",
+            "Website": "={{ $json.website }}",
+            "Email": "={{ $json.email }}",
+            "Phone": "={{ $json.phone }}",
+            "Address ": "={{ $json.address }}",
+            "Location": "={{ $json.city }}",
+            "Lead Score": "={{ $json.lead_score }}",
+            "Lead Tier": "={{ $json.lead_tier }}",
+            "Place ID": "={{ $json.place_id }}",
+            "Status": "New",
+            "Rating ": "={{ $json.rating }}",
+            "Review count": "={{ $json.reviews_count }}",
+            "Instagram": "={{ $json.instagram }}"
+          },
+          "matchingColumns": [
+            "Place ID"
+          ],
+          "schema": [
+            {
+              "id": "Business Name",
+              "displayName": "Business Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Services",
+              "displayName": "Services",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Address ",
+              "displayName": "Address ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Score",
+              "displayName": "Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Tier",
+              "displayName": "Lead Tier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Place ID",
+              "displayName": "Place ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Rating ",
+              "displayName": "Rating ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Review count",
+              "displayName": "Review count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Instagram",
+              "displayName": "Instagram",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d4edf9ec-a873-41c5-9bb4-0645ca50215f",
+      "name": "Saves leads to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -96,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "jwmTMRtbieox9MUt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ String($json.Website ?? '').trim() !== '' && String($json.Email ?? '').trim() !== '' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "225a8d56-62b0-4318-bf2c-738e55c6efef"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Website and Email "
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "4f0a4607-c85a-4058-b3f0-1a4d55d0614c",
+                    "leftValue": "={{ String($json.Website ?? '').trim() !== '' && String($json.Email ?? '').trim() === '' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Only Website"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "e01999ad-1c77-4a4c-89d1-e97df7a663bd",
+      "name": "Routes leads",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        96,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const agentItems = $input.all();\nlet source = [];\ntry { source = $('Append or update row in sheet').all(); } catch (e) { source = []; }\n\nconst numbersIn = (text) => (String(text || '').match(/\\d+(?:[.,]\\d+)*/g) || []).map(n => n.replace(/,/g, ''));\n\nreturn agentItems.map((item, i) => {\n  const out = item.json.output || {};\n  const src = source[item.pairedItem?.item ?? i]?.json || {};\n\n  const rating = src.Rating ?? src.rating ?? null;\n  const reviews = src['Review count'] ?? src.reviews_count ?? src.review_count ?? null;\n\n  const allowed = new Set();\n  if (rating !== null && rating !== '') {\n    const r = Number(rating);\n    allowed.add(String(rating)); allowed.add(String(r)); allowed.add(r.toFixed(1));\n  }\n  if (reviews !== null && reviews !== '') allowed.add(String(Number(String(reviews).replace(/,/g, ''))));\n\n  let text = `${out.first_line || ''} ${out.detail_used || ''}`;\n  const name = String(out.business_name || '');\n  if (name) text = text.split(name).join(' ');\n\n  const found = numbersIn(text);\n  const unknown = [...new Set(found.filter(n => !allowed.has(n)))];\n\n  let status = 'Draft';\n  let note = '';\n  if (!out.first_line) { status = 'Needs review'; note = 'No first line generated'; }\n  else if (allowed.size === 0) { status = 'Needs review'; note = 'No rating or review data to verify against'; }\n  else if (unknown.length) { status = 'Needs review'; note = `Number(s) not found in source data: ${unknown.join(', ')}`; }\n\n  return { json: { ...item.json, status, check_note: note } };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        -448
+      ],
+      "id": "6e95c65e-7959-4d39-8a89-147089b76b71",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "pinData": {
+    "Takes a search": [
+      {
+        "json": {
+          "Keyword (Niche)": "medspa",
+          "City": "new york",
+          "Number of places ": 10,
+          "submittedAt": "2026-11-12T16:26:22.221+01:00",
+          "formMode": "test"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Scrapes Google Maps": [
+      {
+        "json": {
+          "title": "MM Aesthetics Med Spa: Marina Musalyants RN",
+          "subTitle": null,
+          "description": null,
+          "ownerDescription": null,
+          "price": null,
+          "categoryName": "Medical spa",
+          "address": "68 Adams St, Brooklyn, NY 11201",
+          "neighborhood": "Dumbo",
+          "street": "68 Adams St",
+          "city": "Brooklyn",
+          "postalCode": "11201",
+          "state": "New York",
+          "countryCode": "US",
+          "website": "https://www.mmaestheticss.com/",
+          "phone": "(929) 389-3311",
+          "phoneUnformatted": "+19293893311",
+          "claimThisBusiness": false,
+          "location": {
+            "lat": 40.7021584,
+            "lng": -73.9888601
+          },
+          "locatedIn": null,
+          "floor": null,
+          "plusCode": null,
+          "menu": null,
+          "servicesLink": null,
+          "totalScore": 4.9,
+          "permanentlyClosed": false,
+          "temporarilyClosed": false,
+          "placeId": "ChIJa-u5gypFwokRKVFPTmqq8yk",
+          "categories": [
+            "Medical spa"
+          ],
+          "fid": "0x89c2452a83b9eb6b:0x29f3aa6a4e4f5129",
+          "cid": "3022947148452811049",
+          "reviewsCount": 191,
+          "reviewsDistribution": {
+            "oneStar": 4,
+            "twoStar": 2,
+            "threeStar": 1,
+            "fourStar": 0,
+            "fiveStar": 184
+          },
+          "imagesCount": 27,
+          "imageCategories": [],
+          "scrapedAt": "2026-11-12T15:26:29.384Z",
+          "reserveTableUrl": null,
+          "googleFoodUrl": null,
+          "hotelStars": null,
+          "hotelDescription": null,
+          "checkInDate": null,
+          "checkOutDate": null,
+          "hotelAds": [],
+          "popularTimesLiveText": null,
+          "popularTimesLivePercent": null,
+          "popularTimesHistogram": {},
+          "openingHours": [
+            {
+              "day": "Monday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Tuesday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Wednesday",
+              "hours": "Closed"
+            },
+            {
+              "day": "Thursday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Friday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Saturday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Sunday",
+              "hours": "11 AM to 7 PM"
+            }
+          ],
+          "wasOpenAtScrapeTime": false,
+          "peopleAlsoSearch": [],
+          "placesTags": [],
+          "reviewsTags": [],
+          "additionalInfo": {
+            "Accessibility": [
+              {
+                "Wheelchair accessible restroom": true
+              },
+              {
+                "Wheelchair accessible seating": true
+              }
+            ]
+          },
+          "gasPrices": [],
+          "url": "https://www.google.com/maps/search/?api=1&query=MM%20Aesthetics%20Med%20Spa%3A%20Marina%20Musalyants%20RN&query_place_id=ChIJa-u5gypFwokRKVFPTmqq8yk",
+          "searchPageUrl": "https://www.google.com/maps/search/medspa/@40.59321488768417,-73.70638644734598,13z?hl=en",
+          "searchString": "medspa",
+          "language": "en",
+          "rank": 20,
+          "isAdvertisement": false,
+          "imageUrl": "https://lh3.googleusercontent.com/grass-cs/AABkmLdHkf2-6YWW1c27Jm0aTWqkMbIsY-SNPUl1fAbj-TQAkOxHRxp6778xvj76WCmyCYSNsde_VTPbIJAqn5H1d1i3HrP1Jyo51uVX45L8PuPMeLoZlPLiRsx65-dfTaPHX-HyjRfiIw=w408-h544-k-no",
+          "kgmid": "/g/11pty8j7xp",
+          "businessProfileId": "12264416461492259356",
+          "emails": [
+            "Marina@mmaestheticss.com",
+            "marina@mmaestheticss.com"
+          ],
+          "phones": [],
+          "phonesUncertain": [
+            "39033989",
+            "1680932613156",
+            "1792451106424",
+            "5711171",
+            "1680932613222",
+            "35211249",
+            "1756582417700",
+            "9139-422756",
+            "777777777777777",
+            "8488265",
+            "063977298826739",
+            "450545925936641",
+            "4076479",
+            "3772360940",
+            "8373662",
+            "72858757",
+            "1792157290589",
+            "1792069273749",
+            "(929) 389-3311",
+            "1681596642894",
+            "65235370",
+            "66146635857",
+            "45622516970499",
+            "4562251697049",
+            "1712520437459",
+            "1754165430116",
+            "539555006180469",
+            "200025003125390",
+            "3316725589191",
+            "1754165450567",
+            "1691440449790",
+            "45622516970497",
+            "1341527",
+            "1756681966912",
+            "1618497398784",
+            "1618497398838",
+            "1618497259178",
+            "20140301",
+            "1618422235028",
+            "1618426532265",
+            "1607694583486",
+            "20140228",
+            "1618427191766",
+            "1618427191936",
+            "1607694644871",
+            "1618497918447",
+            "1618498674395",
+            "1607638148090",
+            "1618497948158",
+            "1618498674401"
+          ],
+          "linkedIns": [],
+          "twitters": [],
+          "instagrams": [
+            "https://www.instagram.com/mm.aestheticss"
+          ],
+          "facebooks": [],
+          "youtubes": [],
+          "tiktoks": [],
+          "pinterests": [],
+          "discords": [],
+          "domain": "mmaestheticss.com",
+          "leadsEnrichment": []
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      },
+      {
+        "json": {
+          "title": "Diamond Works Medspa",
+          "subTitle": null,
+          "description": null,
+          "ownerDescription": null,
+          "price": null,
+          "categoryName": "Medical spa",
+          "address": "32-12 Broadway 2nd floor, Astoria, NY 11106",
+          "neighborhood": "Astoria",
+          "street": "32-12 Broadway 2nd floor",
+          "city": "Astoria",
+          "postalCode": "11106",
+          "state": "New York",
+          "countryCode": "US",
+          "website": "https://www.diamondworksmedspa.com/",
+          "phone": "(347) 631-0922",
+          "phoneUnformatted": "+13476310922",
+          "claimThisBusiness": false,
+          "location": {
+            "lat": 40.7612085,
+            "lng": -73.9242476
+          },
+          "locatedIn": null,
+          "floor": null,
+          "plusCode": null,
+          "menu": null,
+          "servicesLink": null,
+          "totalScore": 4.8,
+          "permanentlyClosed": false,
+          "temporarilyClosed": false,
+          "placeId": "ChIJw94yqD5fwokR9luRTa0noPY",
+          "categories": [
+            "Medical spa",
+            "Plastic surgery clinic"
+          ],
+          "fid": "0x89c25f3ea832dec3:0xf6a027ad4d915bf6",
+          "cid": "17771247754888174582",
+          "reviewsCount": 180,
+          "reviewsDistribution": {
+            "oneStar": 6,
+            "twoStar": 1,
+            "threeStar": 1,
+            "fourStar": 4,
+            "fiveStar": 168
+          },
+          "imagesCount": 98,
+          "imageCategories": [],
+          "scrapedAt": "2026-11-12T15:26:38.415Z",
+          "reserveTableUrl": null,
+          "googleFoodUrl": null,
+          "hotelStars": null,
+          "hotelDescription": null,
+          "checkInDate": null,
+          "checkOutDate": null,
+          "hotelAds": [],
+          "popularTimesLiveText": null,
+          "popularTimesLivePercent": null,
+          "popularTimesHistogram": {},
+          "openingHours": [
+            {
+              "day": "Monday",
+              "hours": "Closed"
+            },
+            {
+              "day": "Tuesday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Wednesday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Thursday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Friday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Saturday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Sunday",
+              "hours": "Closed"
+            }
+          ],
+          "wasOpenAtScrapeTime": true,
+          "peopleAlsoSearch": [],
+          "placesTags": [],
+          "reviewsTags": [],
+          "additionalInfo": {
+            "Accessibility": [
+              {
+                "Wheelchair accessible restroom": true
+              }
+            ]
+          },
+          "gasPrices": [],
+          "url": "https://www.google.com/maps/search/?api=1&query=Diamond%20Works%20Medspa&query_place_id=ChIJw94yqD5fwokR9luRTa0noPY",
+          "searchPageUrl": "https://www.google.com/maps/search/medspa/@40.80099311231582,-73.84296222367298,13z?hl=en",
+          "searchString": "medspa",
+          "language": "en",
+          "rank": 2,
+          "isAdvertisement": false,
+          "imageUrl": "https://lh3.googleusercontent.com/grass-cs/AABkmLey4AhK5oMhccnSEoqEW1KJB4za_PKxQRizmLo66wN6igQCQgEZj_AxrRbaGNM9zk8diO-RPsNYIWgsMlH_wqrwB_GC8q1rnsoIp-G1-xLIPa7EdLoFzs7wsnD-ps_4nOZr1JPT=w408-h320-k-no",
+          "kgmid": "/g/1vvdw3zr",
+          "businessProfileId": "17861632334426615249",
+          "emails": [],
+          "phones": [
+            "+13476310922",
+            "347-631-0922"
+          ],
+          "phonesUncertain": [
+            "347-631-0922"
+          ],
+          "linkedIns": [],
+          "twitters": [],
+          "instagrams": [
+            "https://www.instagram.com/diamondworksmedspa"
+          ],
+          "facebooks": [
+            "https://www.facebook.com/100393351465181"
+          ],
+          "youtubes": [
+            "https://www.youtube.com/channel/UCmyrDCKYuJQWqTencQy8AOg"
+          ],
+          "tiktoks": [],
+          "pinterests": [],
+          "discords": [],
+          "domain": "diamondworksmedspa.com",
+          "leadsEnrichment": []
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      },
+      {
+        "json": {
+          "title": "VR MedSpa Aesthetic Salon, Manhattan",
+          "subTitle": null,
+          "description": null,
+          "ownerDescription": null,
+          "price": null,
+          "categoryName": "Medical spa",
+          "address": "242 E 72nd St #1E, New York, NY 10021",
+          "neighborhood": "Manhattan",
+          "street": "242 E 72nd St #1E",
+          "city": "New York",
+          "postalCode": "10021",
+          "state": "New York",
+          "countryCode": "US",
+          "website": "http://vrmed.nyc/",
+          "phone": "(347) 370-7668",
+          "phoneUnformatted": "+13473707668",
+          "claimThisBusiness": false,
+          "location": {
+            "lat": 40.7688759,
+            "lng": -73.9590898
+          },
+          "locatedIn": null,
+          "floor": null,
+          "plusCode": null,
+          "menu": null,
+          "servicesLink": null,
+          "totalScore": 4.2,
+          "permanentlyClosed": false,
+          "temporarilyClosed": false,
+          "placeId": "ChIJ0aw5Z09ZwokRCkUr7qBilow",
+          "categories": [
+            "Medical spa"
+          ],
+          "fid": "0x89c2594f6739acd1:0x8c9662a0ee2b450a",
+          "cid": "10130392855146611978",
+          "reviewsCount": 54,
+          "reviewsDistribution": {
+            "oneStar": 9,
+            "twoStar": 2,
+            "threeStar": 0,
+            "fourStar": 1,
+            "fiveStar": 42
+          },
+          "imagesCount": 32,
+          "imageCategories": [],
+          "scrapedAt": "2026-11-12T15:26:38.415Z",
+          "reserveTableUrl": null,
+          "googleFoodUrl": null,
+          "hotelStars": null,
+          "hotelDescription": null,
+          "checkInDate": null,
+          "checkOutDate": null,
+          "hotelAds": [],
+          "popularTimesLiveText": null,
+          "popularTimesLivePercent": null,
+          "popularTimesHistogram": {},
+          "openingHours": [
+            {
+              "day": "Monday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Tuesday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Wednesday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Thursday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Friday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Saturday",
+              "hours": "Closed"
+            },
+            {
+              "day": "Sunday",
+              "hours": "Closed"
+            }
+          ],
+          "wasOpenAtScrapeTime": false,
+          "peopleAlsoSearch": [],
+          "placesTags": [],
+          "reviewsTags": [],
+          "additionalInfo": {
+            "Accessibility": [
+              {
+                "Wheelchair accessible restroom": true
+              }
+            ]
+          },
+          "gasPrices": [],
+          "url": "https://www.google.com/maps/search/?api=1&query=VR%20MedSpa%20Aesthetic%20Salon%2C%20Manhattan&query_place_id=ChIJ0aw5Z09ZwokRCkUr7qBilow",
+          "searchPageUrl": "https://www.google.com/maps/search/medspa/@40.80099311231582,-73.84296222367298,13z?hl=en",
+          "searchString": "medspa",
+          "language": "en",
+          "rank": 4,
+          "isAdvertisement": false,
+          "imageUrl": "https://lh3.googleusercontent.com/grass-cs/AABkmLfoa7DFOa2Ud0d0GgDiWYzl12qa0-wRRzIVIq19VZpVOBZBeZwMo12-DSgLlKFEIQ_1OHEedhzoLZ7dI-IK6ZTnHI904DkeWuW5tHyKIGZORUfFPceTAlZ4xDNa8nyNbDnKzP9StQ=w426-h240-k-no",
+          "kgmid": "/g/11pzs0tyj7",
+          "businessProfileId": "8228572896518649673",
+          "emails": [],
+          "phones": [],
+          "phonesUncertain": [
+            "(347) 370-7668"
+          ],
+          "linkedIns": [],
+          "twitters": [],
+          "instagrams": [
+            "https://www.instagram.com/vrmed.spa",
+            "https://www.instagram.com/vemedspa"
+          ],
+          "facebooks": [
+            "https://www.facebook.com/vemedspa"
+          ],
+          "youtubes": [],
+          "tiktoks": [],
+          "pinterests": [],
+          "discords": [],
+          "domain": "vrmed.nyc",
+          "leadsEnrichment": []
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      },
+      {
+        "json": {
+          "title": "Med Spa NYC: Beso Aesthetics",
+          "subTitle": null,
+          "description": null,
+          "ownerDescription": null,
+          "price": null,
+          "categoryName": "Medical spa",
+          "address": "1049 5th Ave Ste 1A, New York, NY 10028",
+          "neighborhood": "Manhattan",
+          "street": "1049 5th Ave Ste 1A",
+          "city": "New York",
+          "postalCode": "10028",
+          "state": "New York",
+          "countryCode": "US",
+          "website": "https://besoaesthetics.com/",
+          "phone": "(212) 970-2376",
+          "phoneUnformatted": "+12129702376",
+          "claimThisBusiness": false,
+          "location": {
+            "lat": 40.7812991,
+            "lng": -73.960384
+          },
+          "locatedIn": null,
+          "floor": null,
+          "plusCode": null,
+          "menu": null,
+          "servicesLink": null,
+          "totalScore": 5,
+          "permanentlyClosed": false,
+          "temporarilyClosed": false,
+          "placeId": "ChIJD9c-Ge1ZwokRpx-LLDg-eFc",
+          "categories": [
+            "Medical spa",
+            "Cosmetic surgeon",
+            "Laser hair removal service",
+            "Medical clinic",
+            "Medical office",
+            "Plastic surgery clinic",
+            "Skin care clinic",
+            "Wellness center"
+          ],
+          "fid": "0x89c259ed193ed70f:0x57783e382c8b1fa7",
+          "cid": "6302856089491414951",
+          "reviewsCount": 409,
+          "reviewsDistribution": {
+            "oneStar": 3,
+            "twoStar": 0,
+            "threeStar": 1,
+            "fourStar": 2,
+            "fiveStar": 403
+          },
+          "imagesCount": 53,
+          "imageCategories": [],
+          "scrapedAt": "2026-11-12T15:26:38.415Z",
+          "reserveTableUrl": null,
+          "googleFoodUrl": null,
+          "hotelStars": null,
+          "hotelDescription": null,
+          "checkInDate": null,
+          "checkOutDate": null,
+          "hotelAds": [],
+          "popularTimesLiveText": null,
+          "popularTimesLivePercent": null,
+          "popularTimesHistogram": {},
+          "openingHours": [
+            {
+              "day": "Monday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Tuesday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Wednesday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Thursday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Friday",
+              "hours": "10 AM to 6 PM"
+            },
+            {
+              "day": "Saturday",
+              "hours": "10 AM to 6 PM"
+            },
+            {
+              "day": "Sunday",
+              "hours": "10 AM to 6 PM"
+            }
+          ],
+          "wasOpenAtScrapeTime": true,
+          "peopleAlsoSearch": [],
+          "placesTags": [],
+          "reviewsTags": [],
+          "additionalInfo": {
+            "Accessibility": [
+              {
+                "Wheelchair accessible entrance": true
+              },
+              {
+                "Wheelchair accessible restroom": true
+              }
+            ]
+          },
+          "gasPrices": [],
+          "url": "https://www.google.com/maps/search/?api=1&query=Med%20Spa%20NYC%3A%20Beso%20Aesthetics&query_place_id=ChIJD9c-Ge1ZwokRpx-LLDg-eFc",
+          "searchPageUrl": "https://www.google.com/maps/search/medspa/@40.80099311231582,-73.84296222367298,13z?hl=en",
+          "searchString": "medspa",
+          "language": "en",
+          "rank": 3,
+          "isAdvertisement": false,
+          "imageUrl": "https://lh3.googleusercontent.com/grass-cs/AABkmLfkWURh_13aFqR_n_JNYRceSTeE-nzMmFkA34SXCono3FA-cIsj8JVqLBZYd9xp8aBQTvVBiWrJoUHTN_wnJiK6CY31DDvYpWPubqSIIam_heofRvzDWN4gKT1B6HC6Y4mw4oVr=w408-h544-k-no",
+          "kgmid": "/g/11sp96qgg5",
+          "businessProfileId": "6657535608709710238",
+          "emails": [],
+          "phones": [
+            "+12129702376"
+          ],
+          "phonesUncertain": [],
+          "linkedIns": [],
+          "twitters": [],
+          "instagrams": [
+            "https://www.instagram.com/beso_aesthetics"
+          ],
+          "facebooks": [
+            "https://www.facebook.com/BesoAestheticsNYC"
+          ],
+          "youtubes": [],
+          "tiktoks": [
+            "https://www.tiktok.com/@beso_aesthetics"
+          ],
+          "pinterests": [],
+          "discords": [],
+          "domain": "besoaesthetics.com",
+          "leadsEnrichment": []
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      },
+      {
+        "json": {
+          "title": "VJ MedSpa",
+          "subTitle": null,
+          "description": null,
+          "ownerDescription": null,
+          "price": null,
+          "categoryName": "Medical spa",
+          "address": "1220 Lexington Ave Ste 2A, New York, NY 10028",
+          "neighborhood": "Manhattan",
+          "street": "1220 Lexington Ave Ste 2A",
+          "city": "New York",
+          "postalCode": "10028",
+          "state": "New York",
+          "countryCode": "US",
+          "website": "https://vjmednyc.com/",
+          "phone": "(212) 365-4783",
+          "phoneUnformatted": "+12123654783",
+          "claimThisBusiness": false,
+          "location": {
+            "lat": 40.7773633,
+            "lng": -73.9573587
+          },
+          "locatedIn": null,
+          "floor": null,
+          "plusCode": null,
+          "menu": null,
+          "servicesLink": null,
+          "totalScore": 4.5,
+          "permanentlyClosed": false,
+          "temporarilyClosed": false,
+          "placeId": "ChIJ8RefA3BZwokRvSDg61ofL0g",
+          "categories": [
+            "Medical spa"
+          ],
+          "fid": "0x89c25970039f17f1:0x482f1f5aebe020bd",
+          "cid": "5201410570001064125",
+          "reviewsCount": 124,
+          "reviewsDistribution": {
+            "oneStar": 15,
+            "twoStar": 1,
+            "threeStar": 0,
+            "fourStar": 1,
+            "fiveStar": 107
+          },
+          "imagesCount": 140,
+          "imageCategories": [],
+          "scrapedAt": "2026-11-12T15:26:38.415Z",
+          "reserveTableUrl": null,
+          "googleFoodUrl": null,
+          "hotelStars": null,
+          "hotelDescription": null,
+          "checkInDate": null,
+          "checkOutDate": null,
+          "hotelAds": [],
+          "popularTimesLiveText": null,
+          "popularTimesLivePercent": null,
+          "popularTimesHistogram": {},
+          "openingHours": [
+            {
+              "day": "Monday",
+              "hours": "Closed"
+            },
+            {
+              "day": "Tuesday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Wednesday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Thursday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Friday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Saturday",
+              "hours": "11 AM to 7 PM"
+            },
+            {
+              "day": "Sunday",
+              "hours": "Closed"
+            }
+          ],
+          "wasOpenAtScrapeTime": false,
+          "peopleAlsoSearch": [],
+          "placesTags": [],
+          "reviewsTags": [],
+          "additionalInfo": {
+            "Accessibility": [
+              {
+                "Wheelchair accessible parking lot": false
+              }
+            ]
+          },
+          "gasPrices": [],
+          "url": "https://www.google.com/maps/search/?api=1&query=VJ%20MedSpa&query_place_id=ChIJ8RefA3BZwokRvSDg61ofL0g",
+          "searchPageUrl": "https://www.google.com/maps/search/medspa/@40.80099311231582,-73.84296222367298,13z?hl=en",
+          "searchString": "medspa",
+          "language": "en",
+          "rank": 1,
+          "isAdvertisement": false,
+          "imageUrl": "https://lh3.googleusercontent.com/grass-cs/AABkmLfiUCTDuCTma6ASLyNuumUi6_6z9d7NsHlFZkZKgNhR9a2PUWHT-r_e4QmBKS_PMvQRTWaTx_vqXKJawDukco3qbwZZGVrNVZwpF-TAY0BLUPVQQbaV3c8oN0kQ0qQoZSR7eFGcrQ=w408-h408-k-no",
+          "kgmid": "/g/11rfdfhk5g",
+          "businessProfileId": "3569392967434979835",
+          "emails": [],
+          "phones": [],
+          "phonesUncertain": [
+            "(212) 365-4783",
+            "12.11.2026"
+          ],
+          "linkedIns": [],
+          "twitters": [],
+          "instagrams": [
+            "https://www.instagram.com/medicalspavj"
+          ],
+          "facebooks": [],
+          "youtubes": [],
+          "tiktoks": [],
+          "pinterests": [],
+          "discords": [],
+          "domain": "vjmednyc.com",
+          "leadsEnrichment": []
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      },
+      {
+        "json": {
+          "title": "Bel Angé Medical Spa",
+          "subTitle": null,
+          "description": null,
+          "ownerDescription": null,
+          "price": null,
+          "categoryName": "Medical spa",
+          "address": "70 Laight St, New York, NY 10013",
+          "neighborhood": "Manhattan",
+          "street": "70 Laight St",
+          "city": "New York",
+          "postalCode": "10013",
+          "state": "New York",
+          "countryCode": "US",
+          "website": "https://www.belangemedspa.com/?utm_source=google&utm_medium=organic&utm_campaign=gbp",
+          "phone": "(855) 594-4300",
+          "phoneUnformatted": "+18555944300",
+          "claimThisBusiness": false,
+          "location": {
+            "lat": 40.7223309,
+            "lng": -74.0102086
+          },
+          "locatedIn": null,
+          "floor": null,
+          "plusCode": null,
+          "menu": null,
+          "servicesLink": null,
+          "totalScore": 5,
+          "permanentlyClosed": false,
+          "temporarilyClosed": false,
+          "placeId": "ChIJgaEV849ZwokR2i8Lc4fICEk",
+          "categories": [
+            "Medical spa"
+          ],
+          "fid": "0x89c2598ff315a181:0x4908c887730b2fda",
+          "cid": "5262676648658677722",
+          "reviewsCount": 124,
+          "reviewsDistribution": {
+            "oneStar": 1,
+            "twoStar": 0,
+            "threeStar": 0,
+            "fourStar": 0,
+            "fiveStar": 123
+          },
+          "imagesCount": 24,
+          "imageCategories": [],
+          "scrapedAt": "2026-11-12T15:26:29.384Z",
+          "reserveTableUrl": null,
+          "googleFoodUrl": null,
+          "hotelStars": null,
+          "hotelDescription": null,
+          "checkInDate": null,
+          "checkOutDate": null,
+          "hotelAds": [],
+          "popularTimesLiveText": null,
+          "popularTimesLivePercent": null,
+          "popularTimesHistogram": {},
+          "openingHours": [
+            {
+              "day": "Monday",
+              "hours": "Closed"
+            },
+            {
+              "day": "Tuesday",
+              "hours": "10 AM to 6 PM"
+            },
+            {
+              "day": "Wednesday",
+              "hours": "10 AM to 8 PM"
+            },
+            {
+              "day": "Thursday",
+              "hours": "10 AM to 8 PM"
+            },
+            {
+              "day": "Friday",
+              "hours": "10 AM to 6 PM"
+            },
+            {
+              "day": "Saturday",
+              "hours": "10 AM to 4 PM"
+            },
+            {
+              "day": "Sunday",
+              "hours": "10 AM to 2 PM"
+            }
+          ],
+          "wasOpenAtScrapeTime": true,
+          "peopleAlsoSearch": [],
+          "placesTags": [],
+          "reviewsTags": [],
+          "additionalInfo": {
+            "Accessibility": [
+              {
+                "Wheelchair accessible restroom": true
+              },
+              {
+                "Wheelchair accessible seating": false
+              }
+            ]
+          },
+          "gasPrices": [],
+          "url": "https://www.google.com/maps/search/?api=1&query=Bel%20Ang%C3%A9%20Medical%20Spa&query_place_id=ChIJgaEV849ZwokR2i8Lc4fICEk",
+          "searchPageUrl": "https://www.google.com/maps/search/medspa/@40.59321488768417,-73.70638644734598,13z?hl=en",
+          "searchString": "medspa",
+          "language": "en",
+          "rank": 19,
+          "isAdvertisement": false,
+          "imageUrl": "https://lh3.googleusercontent.com/grass-cs/AABkmLfjqUpfA2HhGG5CJTEZZ069e6OQLpw9smRJ_cjtlGB0K35NF-8mZUUv1IdSpgTZr29EvQh5s45G2gB3T9lLYN_X3e0vYb1jqIJywuzh0NOy5K0M6Pl3V1TOsGj3pAGDX_Z8vx7Ro0NKZd4=w408-h306-k-no",
+          "kgmid": "/g/11x6145t80",
+          "businessProfileId": "133365510631739226",
+          "emails": [],
+          "phones": [
+            "855-594-4300"
+          ],
+          "phonesUncertain": [
+            "40.722330",
+            "526267664865867",
+            "74.010208",
+            "855-594-4300"
+          ],
+          "linkedIns": [],
+          "twitters": [],
+          "instagrams": [
+            "https://www.instagram.com/belangemedspa"
+          ],
+          "facebooks": [
+            "https://www.facebook.com/belangemedspa"
+          ],
+          "youtubes": [],
+          "tiktoks": [],
+          "pinterests": [],
+          "discords": [],
+          "domain": "belangemedspa.com",
+          "leadsEnrichment": []
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      },
+      {
+        "json": {
+          "title": "ZZ Med Spa",
+          "subTitle": null,
+          "description": null,
+          "ownerDescription": null,
+          "price": null,
+          "categoryName": "Medical spa",
+          "address": "598 Broadway 6th Floor, New York, NY 10012",
+          "neighborhood": "Manhattan",
+          "street": "598 Broadway 6th Floor",
+          "city": "New York",
+          "postalCode": "10012",
+          "state": "New York",
+          "countryCode": "US",
+          "website": "https://www.zzmedspa.com/",
+          "phone": "(917) 905-4928",
+          "phoneUnformatted": "+19179054928",
+          "claimThisBusiness": false,
+          "location": {
+            "lat": 40.7251075,
+            "lng": -73.9968973
+          },
+          "locatedIn": null,
+          "floor": null,
+          "plusCode": null,
+          "menu": null,
+          "servicesLink": null,
+          "totalScore": 4.9,
+          "permanentlyClosed": false,
+          "temporarilyClosed": false,
+          "placeId": "ChIJvQ6fhEVZwokR-jXfZ69Vip8",
+          "categories": [
+            "Medical spa"
+          ],
+          "fid": "0x89c25945849f0ebd:0x9f8a55af67df35fa",
+          "cid": "11496095210666931706",
+          "reviewsCount": 216,
+          "reviewsDistribution": {
+            "oneStar": 2,
+            "twoStar": 0,
+            "threeStar": 1,
+            "fourStar": 1,
+            "fiveStar": 212
+          },
+          "imagesCount": 28,
+          "imageCategories": [],
+          "scrapedAt": "2026-11-12T15:26:29.384Z",
+          "reserveTableUrl": null,
+          "googleFoodUrl": null,
+          "hotelStars": null,
+          "hotelDescription": null,
+          "checkInDate": null,
+          "checkOutDate": null,
+          "hotelAds": [],
+          "popularTimesLiveText": null,
+          "popularTimesLivePercent": null,
+          "popularTimesHistogram": {},
+          "openingHours": [
+            {
+              "day": "Monday",
+              "hours": "11 AM to 8 PM"
+            },
+            {
+              "day": "Tuesday",
+              "hours": "11 AM to 8 PM"
+            },
+            {
+              "day": "Wednesday",
+              "hours": "11 AM to 8 PM"
+            },
+            {
+              "day": "Thursday",
+              "hours": "11 AM to 8 PM"
+            },
+            {
+              "day": "Friday",
+              "hours": "11 AM to 8 PM"
+            },
+            {
+              "day": "Saturday",
+              "hours": "11 AM to 8 PM"
+            },
+            {
+              "day": "Sunday",
+              "hours": "11 AM to 8 PM"
+            }
+          ],
+          "wasOpenAtScrapeTime": false,
+          "peopleAlsoSearch": [],
+          "placesTags": [],
+          "reviewsTags": [],
+          "gasPrices": [],
+          "url": "https://www.google.com/maps/search/?api=1&query=ZZ%20Med%20Spa&query_place_id=ChIJvQ6fhEVZwokR-jXfZ69Vip8",
+          "searchPageUrl": "https://www.google.com/maps/search/medspa/@40.59321488768417,-73.70638644734598,13z?hl=en",
+          "searchString": "medspa",
+          "language": "en",
+          "rank": 17,
+          "isAdvertisement": false,
+          "imageUrl": "https://lh3.googleusercontent.com/grass-cs/AABkmLc2vs7zv7Kej2iLebXTIEgWnSAWK2By9eTA-IIaxUFXVBY5U3wHMbGlIFny4djKVsvD-zs9oepS5V1auhV4CzYQeTsq331xzPdt8Ur_lfKFGHqcwp9uOQzAxeRZ_4bdebHPMjbvXJ8_EfPA=w408-h544-k-no",
+          "kgmid": "/g/11n54mj5y6",
+          "businessProfileId": "4411671555318984354",
+          "emails": [
+            "booking@zzmedspa.com"
+          ],
+          "phones": [
+            "+19179054928"
+          ],
+          "phonesUncertain": [
+            "7614659",
+            "(917) 905-4928",
+            "6729181",
+            "1730746395209",
+            "50201915",
+            "772222222222222",
+            "14.866667",
+            "5648418794",
+            "6729106",
+            "945153814",
+            "1730912138163",
+            "1741106255623",
+            "2719558",
+            "184100418410041",
+            "972327726532827",
+            "6374405",
+            "1730923780676",
+            "1730923780746",
+            "1730760582597",
+            "1730760582666",
+            "1730760448029",
+            "1730760448113",
+            "1810639",
+            "1730760418316",
+            "1730760418392",
+            "1730760490146",
+            "1730760490218",
+            "1730760526163",
+            "1730760526239",
+            "1730760562224",
+            "1730760562296",
+            "1730760619220",
+            "1730760619286",
+            "1730760637426",
+            "1730760637491",
+            "1730760654283",
+            "1730760654356",
+            "8066-6511",
+            "1730760679340",
+            "1730760679411",
+            "1777638034078",
+            "1777638034137",
+            "1745610480739",
+            "1730912157050",
+            "1730912161142",
+            "22265625",
+            "016208686843104",
+            "02929688",
+            "67.908905",
+            "27050781"
+          ],
+          "linkedIns": [],
+          "twitters": [],
+          "instagrams": [
+            "https://www.instagram.com/zzmedspa"
+          ],
+          "facebooks": [
+            "https://www.facebook.com/zzdayspany"
+          ],
+          "youtubes": [
+            "https://www.youtube.com/@zzdayspa"
+          ],
+          "tiktoks": [],
+          "pinterests": [],
+          "discords": [],
+          "domain": "zzmedspa.com",
+          "leadsEnrichment": []
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      },
+      {
+        "json": {
+          "title": "Nicole Frontera Beauty",
+          "subTitle": null,
+          "description": null,
+          "ownerDescription": null,
+          "price": null,
+          "categoryName": "Medical spa",
+          "address": "104-02 Rockaway Beach Blvd, Rockaway Park, NY 11694",
+          "neighborhood": "Rockaway Park",
+          "street": "104-02 Rockaway Beach Blvd",
+          "city": "Rockaway Park",
+          "postalCode": "11694",
+          "state": "New York",
+          "countryCode": "US",
+          "website": "http://nicolefronterabeauty.com/?utm_source=google&utm_medium=organic&utm_campaign=gbp-website",
+          "phone": "(718) 945-1100",
+          "phoneUnformatted": "+17189451100",
+          "claimThisBusiness": false,
+          "location": {
+            "lat": 40.5835819,
+            "lng": -73.8251558
+          },
+          "locatedIn": null,
+          "floor": null,
+          "plusCode": null,
+          "menu": null,
+          "servicesLink": null,
+          "totalScore": 5,
+          "permanentlyClosed": false,
+          "temporarilyClosed": false,
+          "placeId": "ChIJweDsvDBowokRCfk3hGEWpwY",
+          "categories": [
+            "Medical spa"
+          ],
+          "fid": "0x89c26830bcece0c1:0x6a716618437f909",
+          "cid": "479376493424146697",
+          "reviewsCount": 519,
+          "reviewsDistribution": {
+            "oneStar": 2,
+            "twoStar": 0,
+            "threeStar": 0,
+            "fourStar": 8,
+            "fiveStar": 509
+          },
+          "imagesCount": 195,
+          "imageCategories": [],
+          "scrapedAt": "2026-11-12T15:26:29.383Z",
+          "reserveTableUrl": null,
+          "googleFoodUrl": null,
+          "hotelStars": null,
+          "hotelDescription": null,
+          "checkInDate": null,
+          "checkOutDate": null,
+          "hotelAds": [],
+          "popularTimesLiveText": null,
+          "popularTimesLivePercent": null,
+          "popularTimesHistogram": {},
+          "openingHours": [
+            {
+              "day": "Monday",
+              "hours": "10 AM to 6 PM"
+            },
+            {
+              "day": "Tuesday",
+              "hours": "9 AM to 5 PM"
+            },
+            {
+              "day": "Wednesday",
+              "hours": "10 AM to 6 PM"
+            },
+            {
+              "day": "Thursday",
+              "hours": "10 AM to 6 PM"
+            },
+            {
+              "day": "Friday",
+              "hours": "9 AM to 5 PM"
+            },
+            {
+              "day": "Saturday",
+              "hours": "9 AM to 3 PM"
+            },
+            {
+              "day": "Sunday",
+              "hours": "Closed"
+            }
+          ],
+          "wasOpenAtScrapeTime": true,
+          "peopleAlsoSearch": [],
+          "placesTags": [],
+          "reviewsTags": [],
+          "additionalInfo": {
+            "Accessibility": [
+              {
+                "Assistive hearing loop": true
+              },
+              {
+                "Wheelchair accessible entrance": true
+              },
+              {
+                "Wheelchair accessible parking lot": true
+              },
+              {
+                "Wheelchair accessible restroom": true
+              },
+              {
+                "Wheelchair accessible seating": true
+              }
+            ]
+          },
+          "gasPrices": [],
+          "url": "https://www.google.com/maps/search/?api=1&query=Nicole%20Frontera%20Beauty&query_place_id=ChIJweDsvDBowokRCfk3hGEWpwY",
+          "searchPageUrl": "https://www.google.com/maps/search/medspa/@40.59321488768417,-73.70638644734598,13z?hl=en",
+          "searchString": "medspa",
+          "language": "en",
+          "rank": 5,
+          "isAdvertisement": false,
+          "imageUrl": "https://lh3.googleusercontent.com/grass-cs/AABkmLdGT3rbkQzHoIberkmkKiXx-MMZGPKXfGWjYQLp25msa20UUANapcLF0udRgeV0X7ZlQRLmSec0rO21cXNZSsS9qYkmdvViK2dwLmcac65TIuO4VP0vvGy90bdC_bCp8Vi4_8g7XA=w408-h250-k-no",
+          "kgmid": "/g/11b77xjyjl",
+          "businessProfileId": "4197619720011018979",
+          "emails": [
+            "info@nicolefronterabeauty.com",
+            "nicole@nicolefronterabeauty.com",
+            "info@theformulamedspa.com"
+          ],
+          "phones": [
+            "+17189451100",
+            "+1(718) 945-1100",
+            "7188664592",
+            "+19143052424"
+          ],
+          "phonesUncertain": [
+            "718.945.1100",
+            "(718) 945-1100",
+            "(914) 305-2424",
+            "(718) 945 1100",
+            "(718) 866-4592",
+            "305-2424"
+          ],
+          "linkedIns": [],
+          "twitters": [],
+          "instagrams": [
+            "https://www.instagram.com/nicolefronterabeauty"
+          ],
+          "facebooks": [
+            "https://www.facebook.com/NicoleFronteraBeauty"
+          ],
+          "youtubes": [
+            "https://www.youtube.com/channel/UCVj6_udZX5QJ3LNjXuf0Abg"
+          ],
+          "tiktoks": [
+            "https://www.tiktok.com/@nicolefronterabeauty"
+          ],
+          "pinterests": [],
+          "discords": [],
+          "domain": "nicolefronterabeauty.com",
+          "leadsEnrichment": []
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      },
+      {
+        "json": {
+          "title": "Dolce Aesthetics NY",
+          "subTitle": null,
+          "description": null,
+          "ownerDescription": null,
+          "price": null,
+          "categoryName": "Medical spa",
+          "address": "161-02 Cross Bay Blvd 2nd fl, Howard Beach, NY 11414",
+          "neighborhood": "Howard Beach",
+          "street": "161-02 Cross Bay Blvd 2nd fl",
+          "city": "Howard Beach",
+          "postalCode": "11414",
+          "state": "New York",
+          "countryCode": "US",
+          "website": "http://dolceaestheticsny.com/?utm_source=google&utm_medium=gmb&utm_campaign=seo",
+          "phone": "(718) 322-5300",
+          "phoneUnformatted": "+17183225300",
+          "claimThisBusiness": false,
+          "location": {
+            "lat": 40.6556365,
+            "lng": -73.8394198
+          },
+          "locatedIn": null,
+          "floor": null,
+          "plusCode": null,
+          "menu": null,
+          "servicesLink": null,
+          "totalScore": 4.9,
+          "permanentlyClosed": false,
+          "temporarilyClosed": false,
+          "placeId": "ChIJ5ZKzKItnwokRVr-6iYkI2EI",
+          "categories": [
+            "Medical spa",
+            "Laser hair removal service",
+            "Skin care clinic"
+          ],
+          "fid": "0x89c2678b28b392e5:0x42d8088989babf56",
+          "cid": "4816609188287004502",
+          "reviewsCount": 36,
+          "reviewsDistribution": {
+            "oneStar": 1,
+            "twoStar": 0,
+            "threeStar": 0,
+            "fourStar": 0,
+            "fiveStar": 35
+          },
+          "imagesCount": 13,
+          "imageCategories": [],
+          "scrapedAt": "2026-11-12T15:26:29.384Z",
+          "reserveTableUrl": null,
+          "googleFoodUrl": null,
+          "hotelStars": null,
+          "hotelDescription": null,
+          "checkInDate": null,
+          "checkOutDate": null,
+          "hotelAds": [],
+          "popularTimesLiveText": null,
+          "popularTimesLivePercent": null,
+          "popularTimesHistogram": {},
+          "openingHours": [
+            {
+              "day": "Monday",
+              "hours": "10 AM to 8 PM"
+            },
+            {
+              "day": "Tuesday",
+              "hours": "10 AM to 8 PM"
+            },
+            {
+              "day": "Wednesday",
+              "hours": "10 AM to 8 PM"
+            },
+            {
+              "day": "Thursday",
+              "hours": "10 AM to 8 PM"
+            },
+            {
+              "day": "Friday",
+              "hours": "10 AM to 8 PM"
+            },
+            {
+              "day": "Saturday",
+              "hours": "10 AM to 6 PM"
+            },
+            {
+              "day": "Sunday",
+              "hours": "Closed"
+            }
+          ],
+          "wasOpenAtScrapeTime": true,
+          "peopleAlsoSearch": [],
+          "placesTags": [],
+          "reviewsTags": [],
+          "additionalInfo": {
+            "Accessibility": [
+              {
+                "Wheelchair accessible restroom": true
+              }
+            ]
+          },
+          "gasPrices": [],
+          "url": "https://www.google.com/maps/search/?api=1&query=Dolce%20Aesthetics%20NY&query_place_id=ChIJ5ZKzKItnwokRVr-6iYkI2EI",
+          "searchPageUrl": "https://www.google.com/maps/search/medspa/@40.59321488768417,-73.70638644734598,13z?hl=en",
+          "searchString": "medspa",
+          "language": "en",
+          "rank": 15,
+          "isAdvertisement": false,
+          "imageUrl": "https://lh3.googleusercontent.com/grass-cs/AABkmLd1BIue_gCiSzlOkwk7zQR3-mWrrqP1JJ1wVX2iqgV2h8Qcz58U-8sai8C48O1wRMhUZ3B0dR8S_apHTJEJagIZauo3K1yl-jE9fRi37yViWFp6O0o2irVaDXutzbeUtjfyKHOa=w408-h434-k-no",
+          "kgmid": "/g/11gy1v3_zg",
+          "businessProfileId": "5512944668334591782",
+          "emails": [],
+          "phones": [
+            "718-365-2369",
+            "718-745-3941",
+            "718-322-5300",
+            "516-240-1919",
+            "7183652369",
+            "7183225300",
+            "718.322.5300"
+          ],
+          "phonesUncertain": [
+            "718-745-3941",
+            "1767122293264",
+            "37170009",
+            "40.622129",
+            "74.031209",
+            "75767105",
+            "718-365-2369",
+            "40.703232",
+            "66727044",
+            "73.867127",
+            "85767105",
+            "718-322-5300",
+            "12690086",
+            "40.655673",
+            "52883552",
+            "73.839430",
+            "516-240-1919",
+            "25312002",
+            "40.654089",
+            "42057071",
+            "73.628222",
+            "40.775020",
+            "93551226",
+            "68650657",
+            "74.324371",
+            "917-428-0088"
+          ],
+          "linkedIns": [],
+          "twitters": [
+            "https://twitter.com/dolceaesthetic"
+          ],
+          "instagrams": [
+            "https://www.instagram.com/dolceaestheticsny"
+          ],
+          "facebooks": [
+            "https://www.facebook.com/dolceaestheticsny"
+          ],
+          "youtubes": [
+            "https://www.youtube.com/@botoxbabe100"
+          ],
+          "tiktoks": [
+            "https://www.tiktok.com/@jenniferdilandro"
+          ],
+          "pinterests": [],
+          "discords": [],
+          "domain": "dolceaestheticsny.com",
+          "leadsEnrichment": []
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      },
+      {
+        "json": {
+          "title": "Renuev Med Spa",
+          "subTitle": null,
+          "description": null,
+          "ownerDescription": null,
+          "price": null,
+          "categoryName": "Medical spa",
+          "address": "161 Water St Suite 2302, New York, NY 10038",
+          "neighborhood": "Manhattan",
+          "street": "161 Water St Suite 2302",
+          "city": "New York",
+          "postalCode": "10038",
+          "state": "New York",
+          "countryCode": "US",
+          "website": "https://renuevmedspa.com/",
+          "phone": "(347) 629-1669",
+          "phoneUnformatted": "+13476291669",
+          "claimThisBusiness": false,
+          "location": {
+            "lat": 40.70635,
+            "lng": -74.0054286
+          },
+          "locatedIn": null,
+          "floor": null,
+          "plusCode": null,
+          "menu": null,
+          "servicesLink": null,
+          "totalScore": 5,
+          "permanentlyClosed": false,
+          "temporarilyClosed": false,
+          "placeId": "ChIJ0Q7-JgBbwokR2puRwo8Shiw",
+          "categories": [
+            "Medical spa",
+            "Day spa",
+            "IV therapy service",
+            "Medical Center",
+            "Medical clinic",
+            "Medical office",
+            "Skin care clinic",
+            "Wellness center"
+          ],
+          "fid": "0x89c25b0026fe0ed1:0x2c86128fc2919bda",
+          "cid": "3208272193202002906",
+          "reviewsCount": 23,
+          "reviewsDistribution": {
+            "oneStar": 0,
+            "twoStar": 0,
+            "threeStar": 0,
+            "fourStar": 0,
+            "fiveStar": 23
+          },
+          "imagesCount": 19,
+          "imageCategories": [],
+          "scrapedAt": "2026-11-12T15:26:29.384Z",
+          "reserveTableUrl": null,
+          "googleFoodUrl": null,
+          "hotelStars": null,
+          "hotelDescription": null,
+          "checkInDate": null,
+          "checkOutDate": null,
+          "hotelAds": [],
+          "popularTimesLiveText": null,
+          "popularTimesLivePercent": null,
+          "popularTimesHistogram": {},
+          "openingHours": [
+            {
+              "day": "Monday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Tuesday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Wednesday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Thursday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Friday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Saturday",
+              "hours": "10 AM to 7 PM"
+            },
+            {
+              "day": "Sunday",
+              "hours": "Closed"
+            }
+          ],
+          "wasOpenAtScrapeTime": true,
+          "peopleAlsoSearch": [],
+          "placesTags": [],
+          "reviewsTags": [],
+          "additionalInfo": {
+            "Accessibility": [
+              {
+                "Wheelchair accessible entrance": true
+              }
+            ]
+          },
+          "gasPrices": [],
+          "url": "https://www.google.com/maps/search/?api=1&query=Renuev%20Med%20Spa&query_place_id=ChIJ0Q7-JgBbwokR2puRwo8Shiw",
+          "searchPageUrl": "https://www.google.com/maps/search/medspa/@40.59321488768417,-73.70638644734598,13z?hl=en",
+          "searchString": "medspa",
+          "language": "en",
+          "rank": 16,
+          "isAdvertisement": false,
+          "imageUrl": "https://lh3.googleusercontent.com/grass-cs/AABkmLdDgUkAS1mr1EfE2TSVqMeXmdFSrnP9WebiGkfoCl82dtmlDfZYE9Lo64-pB9dWmxka6vCiJwKNPh_MFXET7YOqLiliq3BKvXjgj-UFLBG9PH3WH5gvlfITqOLokF1Rfgrsp_DfDOT8YmA=w408-h725-k-no",
+          "kgmid": "/g/11xvlxqz5q",
+          "businessProfileId": "407711155016799260",
+          "emails": [
+            "info@renuevmedspa.com"
+          ],
+          "phones": [
+            "+13476291669"
+          ],
+          "phonesUncertain": [
+            "+1(347)629-1669",
+            "+1 (347) 629-1669"
+          ],
+          "linkedIns": [],
+          "twitters": [],
+          "instagrams": [
+            "https://www.instagram.com/dusanmartinmd"
+          ],
+          "facebooks": [],
+          "youtubes": [],
+          "tiktoks": [],
+          "pinterests": [],
+          "discords": [],
+          "domain": "renuevmedspa.com",
+          "leadsEnrichment": []
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Data": {
+      "main": [
+        [
+          {
+            "node": "Filters out low scorers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append or update row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Takes a search": {
+      "main": [
+        [
+          {
+            "node": "Scrapes Google Maps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrapes Google Maps": {
+      "main": [
+        [
+          {
+            "node": "Clean Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filters out low scorers": {
+      "main": [
+        [
+          {
+            "node": "Saves leads to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Saves leads to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Routes leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Routes leads": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "i7lquYDrSCtIcFh2",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "e6959d74-0542-4cea-81b3-6fd1c5ede2d1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d179de62a0a610512013d83bfada125b4bc24808f22fa05d2cc15290eb1a35ca"
+  },
+  "nodeGroups": [],
+  "id": "wPS3WnXyvKyk7X5S",
+  "tags": []
+}
