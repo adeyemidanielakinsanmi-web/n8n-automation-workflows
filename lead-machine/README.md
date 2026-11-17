@@ -88,6 +88,7 @@ One spreadsheet with three tabs:
 - **Honest emails.** Each email uses a real name, an honest subject, and a clear way to opt out.
 - **Follow the rules** that apply to where the recipients are (for example CAN-SPAM in the US, GDPR in the EU and UK, and NDPR in Nigeria).
 - Business data is collected through a managed scraper, not by scraping Google directly.
+- Sites that block automated requests are never worked around; they go to a manual follow-up list.
 
 ## Possible improvements
 
